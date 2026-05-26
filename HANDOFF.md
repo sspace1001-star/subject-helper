@@ -32,6 +32,234 @@
 - 
 ```
 
+## 2026-05-26 16:05 KST - 엑셀 전체 재파싱·배포
+
+상태: 완료
+담당: Composer
+
+목표:
+- 2028 엑셀 기준 초기 데이터 재생성 후 서버 반영
+
+변경:
+- 명령: scripts/update_from_excel.py → index.html DEPT_DATA/SUBJECTS 갱신
+- 파일: data/depts.json, data/uploads/latest.xlsx 재생성
+- 서버: deploy_oci.sh, subject-helper 재시작
+
+검증:
+- 명령: curl 서버 /api/data
+- 결과: nonEmpty 40, source 2028 권장과목 xlsx
+
+남은 작업:
+- 없음
+
+차단/주의:
+- 편제표 xlsx에 없는 한문(l7)은 SUBJECTS에 수동 유지
+
+## 2026-05-26 15:52 KST - 운영 주소 univref 로 변경
+
+상태: 완료
+담당: Composer
+
+목표:
+- 학생 안내 URL에 univref 이름 반영
+
+변경:
+- 서버: nginx 메인 vhost `univref.152-69-239-29.sslip.io` (HTTP → gunicorn)
+- 서버: 구 주소(152.69.239.29, nip.io) → univref HTTP로 301
+- 서버: HTTPS는 기존 `152.69.239.29.nip.io` 인증서만 유지
+- 파일: README.md, scripts/deploy_oci.sh, scripts/nginx-subject-helper.conf
+
+검증:
+- 명령: curl http://univref.152-69-239-29.sslip.io/
+- 결과: HTTP 200
+
+남은 작업:
+- univref 호스트 HTTPS (LE 한도 해제 후 certbot 또는 학교 도메인)
+
+차단/주의:
+- univref.duckdns.org 는 타 IP 사용 중
+- nip.io/sslip.io 신규 LE 발급 주간 한도 초과 (2026-05-26)
+
+## 2026-05-26 15:48 KST - nginx HTTPS (nip.io) 연동
+
+상태: 완료
+담당: Composer
+
+목표:
+- 포트 번호 없이 HTTPS로 학생 접속 가능하게 정리
+
+변경:
+- 서버: nginx 80/443 → gunicorn:5001 리버스 프록시
+- 서버: Let's Encrypt 인증서 (152.69.239.29.nip.io), certbot 자동 갱신
+- OCI 보안목록·iptables 80/443 개방
+- 파일: README.md, scripts/deploy_oci.sh URL 갱신
+
+검증:
+- 명령: curl https://152.69.239.29.nip.io/ 및 /api/data
+- 결과: HTTPS 200, API nonEmpty 40
+
+남은 작업:
+- 학교 전용 도메인(CNAME) 연결 시 certbot -d 로 인증서 교체
+
+차단/주의:
+- sslip.io 는 LE 발급 한도 초과로 nip.io 사용
+- IP만으로는 HTTPS 인증서 이름 불일치 가능 → nip.io URL 안내
+
+## 2026-05-26 15:42 KST - OCI vm-1-6 Flask 배포
+
+상태: 완료
+담당: Composer
+
+목표:
+- oracle-bot-vm-1-6에 subject-helper Flask 운영 배포
+
+변경:
+- 파일: requirements.txt — gunicorn 추가
+- 파일: scripts/deploy_oci.sh — rsync + pip + systemctl 재시작
+- 파일: README.md — 운영 URL·재배포 명령
+- 서버: 152.69.239.29 예약 IP, OCI 보안목록·iptables 5001 개방
+- 서버: ~/subject-helper, .venv, nodejs, systemd subject-helper
+
+검증:
+- 명령: curl http://152.69.239.29:5001/ 및 /api/data
+- 결과: HTTP 200, nonEmpty 40
+
+남은 작업:
+- HTTPS(443) 또는 도메인 연결 선택
+
+차단/주의:
+- 접속 URL에 포트 :5001 필요
+
+## 2026-05-26 15:28 KST - Flask 공용 저장 업로드 서버 추가
+
+상태: 완료
+담당: Codex
+
+목표:
+- 선생님이 엑셀 업로드하면 같은 반 학생들이 같은 데이터를 보도록 서버 저장 구조 추가
+
+변경:
+- 파일: app.py
+  - Flask 앱 추가
+  - `GET /api/data`: 저장 데이터 조회
+  - `POST /api/upload`: 엑셀 저장 후 파싱 결과를 `data/depts.json`에 저장
+  - `/`: index.html 제공
+- 파일: scripts/excel_to_depts.py
+  - 업로드 엑셀 파일을 DEPT_DATA.depts 구조로 변환
+- 파일: scripts/update_from_excel.py
+  - 외부 엑셀 경로를 받아 학과 매핑 생성 가능하도록 수정
+- 파일: index.html
+  - 업로드를 브라우저 메모리 처리 대신 `/api/upload` 서버 저장으로 변경
+  - 페이지 시작 시 `/api/data` 저장 데이터 자동 로드
+- 파일: requirements.txt
+  - Flask 추가
+- 파일: .gitignore
+  - data/ 제외
+- 파일: README.md
+  - 서버 업로드 운영 방식 문서화
+
+검증:
+- 명령: .venv/bin/python app.py
+- 결과: http://127.0.0.1:5001 서버 실행
+- 명령: curl -F file=@docs/2028...xlsx http://127.0.0.1:5001/api/upload
+- 결과: 업로드 성공, source 저장, nonEmpty=40
+- 명령: curl http://127.0.0.1:5001/api/data
+- 결과: 저장 데이터 조회 성공, 경제 데이터 존재
+
+남은 작업:
+- 운영 서버 배포 환경 선택 필요
+
+차단/주의:
+- GitHub Pages만으로는 공용 저장 불가. Flask 앱을 Render/Railway/Fly.io/교내 서버 등 Python 서버에 배포해야 함
+
+## 2026-05-26 15:18 KST - 브라우저 엑셀 업로드 파싱 UI 추가
+
+상태: 완료
+담당: Codex
+
+목표:
+- 선생님이 수정한 2028 권장과목 엑셀을 화면에서 업로드해 즉시 파싱하는 구조 추가
+
+변경:
+- 파일: index.html
+  - SheetJS `xlsx@0.18.5` CDN 추가
+  - 사이드바 `엑셀 데이터 업로드` 카드 추가
+  - 업로드된 엑셀의 C/D/E/F/G/H/J 열과 병합 셀을 브라우저에서 파싱
+  - 업로드 데이터로 `DEPT_DATA.depts` 런타임 교체
+  - 대학 선택 필터/하이라이트/코멘트 표시가 업로드 데이터에 즉시 적용
+  - 국민대 선택 옵션 추가
+- 파일: README.md
+  - 브라우저 업로드 운영 방식 문서화
+
+검증:
+- 명령: node script syntax compile
+- 결과: script_ok 0, script_ok 1
+- 명령: node DEPT_DATA 추출
+- 결과: 43개 학과, 경제 sources=19
+- 명령: .venv/bin/python scripts/audit_excel_mapping.py
+- 결과: curriculum_subjects_2026=103, app_subjects_2026=103, curriculum_subjects_2025=103, app_subjects_2025=103, bad_ids=[], ref_count=290, comment_count=40
+
+남은 작업:
+- 없음
+
+차단/주의:
+- 업로드는 서버 저장 없음. 새로고침하면 배포 기본 데이터로 복귀
+- 배포 기본 데이터 갱신은 로컬 스크립트 실행 후 커밋/푸시 필요
+
+## 2026-05-26 15:13 KST - 코멘트 없음 표시 제거
+
+상태: 완료
+담당: Codex
+
+목표:
+- 코멘트/대학 매칭 데이터가 없으면 별도 안내 문구를 표시하지 않음
+
+변경:
+- 파일: index.html
+  - "선택한 대학의 엑셀 매칭 데이터가 없습니다." 메시지 제거
+  - comment가 있을 때만 코멘트 박스 표시
+
+검증:
+- 명령: node 문자열 확인
+- 결과: message_removed, korea_econ_sources=0
+- 명령: .venv/bin/python scripts/audit_excel_mapping.py
+- 결과: curriculum_subjects_2026=103, app_subjects_2026=103, curriculum_subjects_2025=103, app_subjects_2025=103, bad_ids=[], ref_count=290, comment_count=40
+
+남은 작업:
+- 없음
+
+차단/주의:
+- 없음
+
+## 2026-05-26 15:11 KST - 대학 선택 필터 적용
+
+상태: 완료
+담당: Codex
+
+목표:
+- 고려대 선택 시 국민대 등 다른 대학 코멘트가 표시되는 문제 수정
+
+변경:
+- 파일: scripts/update_from_excel.py
+  - 학과별 `sources` 추가
+  - source별 대학 key, 대학명, 모집단위, comment, core, rec, ref 저장
+- 파일: index.html
+  - `getDeptInfo()` 추가
+  - 대학 선택값이 있으면 해당 대학 sources만 합산해 하이라이트/안내 표시
+  - 선택 대학 매칭 데이터가 없으면 다른 대학 데이터 대신 "선택한 대학의 엑셀 매칭 데이터가 없습니다." 표시
+
+검증:
+- 명령: node 데이터 추출
+- 결과: `경제` + `korea` sources=0, `경제` + `국민` sources=1
+- 명령: .venv/bin/python scripts/audit_excel_mapping.py
+- 결과: curriculum_subjects_2026=103, app_subjects_2026=103, curriculum_subjects_2025=103, app_subjects_2025=103, bad_ids=[], ref_count=290, comment_count=40
+
+남은 작업:
+- 없음
+
+차단/주의:
+- 고려대 경제는 현재 엑셀 매칭 source 없음
+
 ## 2026-05-26 15:04 KST - 2028 엑셀 J열 comment 초안 기록
 
 상태: 완료

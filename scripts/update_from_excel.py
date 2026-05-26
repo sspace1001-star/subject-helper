@@ -141,6 +141,7 @@ FIXED_IDS = {
     "중국어 회화": "l4",
     "일본 문화": "l5",
     "중국 문화": "l6",
+    "한문": "l7",
     "진로와 직업": "c1",
     "논술": "c2",
 }
@@ -151,6 +152,8 @@ COURSE_ALIASES = {
     "확률": ["확률과 통계"],
     "미적분": ["미적분Ⅰ", "미적분Ⅱ"],
 }
+
+AREA_SLASH_PREFIXES = ("제2외국어",)
 
 MATCH_KEYWORDS = {
     "국어국문": ["국어국문"],
@@ -216,6 +219,18 @@ def get_area(raw: str) -> str | None:
     return None
 
 
+def build_course_to_id() -> dict[str, str]:
+    subjects = []
+    for year in ("2026", "2025"):
+        subjects.extend(item for values in load_curriculum(year).values() for item in values)
+    course_to_id: dict[str, str] = {}
+    for item in subjects:
+        course_to_id.setdefault(item["name"], item["id"])
+    for name, subject_id in FIXED_IDS.items():
+        course_to_id.setdefault(name, subject_id)
+    return course_to_id
+
+
 def load_curriculum(year: str) -> OrderedDict[str, list[dict[str, object]]]:
     path = next(p for p in DOCS.glob("*.xlsx") if year in p.name)
     wb = openpyxl.load_workbook(path, data_only=True)
@@ -274,12 +289,12 @@ def js_value(value: object, indent: int = 2) -> str:
     if isinstance(value, dict):
         parts = []
         for key, val in value.items():
-            parts.append(f"{sp}{key}: {js_value(val, indent + 2)}")
+            parts.append(f"{sp}{json.dumps(key, ensure_ascii=False)}: {js_value(val, indent + 2)}")
         return "{\n" + ",\n".join(parts) + "\n" + " " * (indent - 2) + "}"
     if isinstance(value, list):
         if not value:
             return "[]"
-        if isinstance(value[0], dict):
+        if isinstance(value[0], dict) and "id" in value[0]:
             lines = []
             for item in value:
                 fields = ", ".join(
@@ -293,7 +308,11 @@ def js_value(value: object, indent: int = 2) -> str:
                 )
                 lines.append(f"{sp}{{ {fields} }}")
             return "[\n" + ",\n".join(lines) + "\n" + " " * (indent - 2) + "]"
+        if isinstance(value[0], dict):
+            return "[" + ",".join(js_value(item, indent + 2) for item in value) + "]"
         return "[" + ",".join(f"'{item}'" for item in value) + "]"
+    if isinstance(value, str):
+        return json.dumps(value, ensure_ascii=False)
     return json.dumps(value, ensure_ascii=False)
 
 
@@ -301,8 +320,9 @@ def load_depts() -> dict[str, dict[str, object]]:
     script = """
 const fs=require('fs');
 const html=fs.readFileSync('index.html','utf8');
-const data=html.match(/const DEPT_DATA = ([\\s\\S]*?);\\n\\n\\/\\* =========================================================\\n   상태/)[1];
-console.log(JSON.stringify(Function('return '+data)().depts));
+const m=html.match(/const DEPT_DATA = ([\\s\\S]*?);\\s*\\nconst MATCH_KEYWORDS/);
+if(!m) throw new Error('DEPT_DATA block not found');
+console.log(JSON.stringify(Function('return '+m[1])().depts));
 """
     return json.loads(subprocess.check_output(["node", "-e", script], cwd=ROOT, text=True))
 
@@ -311,6 +331,10 @@ def normalize_course_text(text: object) -> list[str]:
     raw = clean(text)
     if not raw or raw == "-" or any(marker in raw for marker in GENERIC_TEXT):
         return []
+    for prefix in AREA_SLASH_PREFIXES:
+        if raw.startswith(f"{prefix}/"):
+            raw = raw.split("/", 1)[1].strip()
+            break
     raw = raw.replace("Ⅰ", "I").replace("Ⅱ", "II")
     raw = raw.replace("미적분II", "미적분Ⅱ").replace("미적분I", "미적분Ⅰ")
     raw = re.sub(r"[\[\]\(\)]", ",", raw)
@@ -318,9 +342,12 @@ def normalize_course_text(text: object) -> list[str]:
     tokens = []
     for token in raw.split(","):
         token = clean(token).strip(": ")
-        if not token or token in {"국어", "영어", "수학", "사회", "과학", "기술", "가정", "제2외국어", "한문"}:
+        if not token or token in {"국어", "영어", "수학", "사회", "과학", "기술", "가정"}:
             continue
-        tokens.extend(COURSE_ALIASES.get(token, [token]))
+        if token in COURSE_ALIASES:
+            tokens.extend(COURSE_ALIASES[token])
+            continue
+        tokens.append(token)
     return tokens
 
 
@@ -329,12 +356,26 @@ def matches(unit: str, dept: str) -> bool:
     return any(keyword in unit for keyword in keywords)
 
 
+def university_key(name: object) -> str:
+    raw = clean(name)
+    if "서울대" in raw:
+        return "seoul"
+    if "연세대" in raw:
+        return "yonsei"
+    if "고려대" in raw:
+        return "korea"
+    for key in ("성균관", "한양", "이화", "중앙", "경희", "건국", "동국", "국민"):
+        if key in raw:
+            return key
+    return raw
+
+
 def ordered_unique(values: list[str]) -> list[str]:
     return list(OrderedDict((value, None) for value in values))
 
 
-def load_dept_mapping(course_to_id: dict[str, str], depts: dict[str, dict[str, object]]) -> dict[str, dict[str, object]]:
-    path = next(p for p in DOCS.glob("*.xlsx") if "2028" in p.name)
+def load_dept_mapping(course_to_id: dict[str, str], depts: dict[str, dict[str, object]], path: Path | None = None) -> dict[str, dict[str, object]]:
+    path = path or next(p for p in DOCS.glob("*.xlsx") if "2028" in p.name)
     rows = load_recommendation_rows(path)
     result = {}
 
@@ -343,20 +384,43 @@ def load_dept_mapping(course_to_id: dict[str, str], depts: dict[str, dict[str, o
         rec_ids: list[str] = []
         ref_ids: list[str] = []
         comments: list[str] = []
+        sources = []
         for row in rows:
             unit = clean(row["unit"])
             if not matches(unit, dept):
                 continue
+            row_core_ids: list[str] = []
+            row_rec_ids: list[str] = []
+            row_ref_ids: list[str] = []
             for token in normalize_course_text(row["core"]):
-                core_ids.extend(token_to_ids(token, course_to_id))
-            target = core_ids if row["rec_merged"] else rec_ids
+                row_core_ids.extend(token_to_ids(token, course_to_id))
+            target = row_core_ids if row["rec_merged"] else row_rec_ids
             for token in normalize_course_text(row["rec"]):
                 target.extend(token_to_ids(token, course_to_id))
-            for token in normalize_course_text(row["ref"]):
-                ref_ids.extend(token_to_ids(token, course_to_id))
+            # 참고 과목 ID는 I열(ref_detail)만 사용. H열은 비고 문구.
+            for token in normalize_course_text(row.get("ref_detail")):
+                row_ref_ids.extend(token_to_ids(token, course_to_id))
             comment = clean(row["comment"])
             if comment:
                 comments.append(comment)
+            row_core = ordered_unique(row_core_ids)
+            row_rec = [item for item in ordered_unique(row_rec_ids) if item not in set(row_core)]
+            row_ref = ordered_unique(row_ref_ids)
+            core_ids.extend(row_core)
+            rec_ids.extend(row_rec)
+            ref_ids.extend(row_ref)
+            if row_core or row_rec or row_ref or comment:
+                sources.append(
+                    {
+                        "univ": university_key(row["university"]),
+                        "univName": clean(row["university"]),
+                        "unit": unit,
+                        "comment": comment,
+                        "core": row_core,
+                        "rec": row_rec,
+                        "ref": row_ref,
+                    }
+                )
         core = ordered_unique(core_ids)
         rec = [item for item in ordered_unique(rec_ids) if item not in set(core)]
         ref = ordered_unique(ref_ids)
@@ -365,6 +429,7 @@ def load_dept_mapping(course_to_id: dict[str, str], depts: dict[str, dict[str, o
             "core": core,
             "rec": rec,
             "ref": ref,
+            "sources": sources,
         }
     return result
 
@@ -386,13 +451,13 @@ def load_recommendation_rows(path: Path) -> list[dict[str, object]]:
     values = {}
     merged_recommendation_cells = set()
     for row_num, row in enumerate(ws.iter_rows(min_row=5, values_only=True), 5):
-        for col in (3, 4, 5, 6, 7, 8, 10):
+        for col in (3, 4, 5, 6, 7, 8, 9, 10):
             values[(row_num, col)] = row[col - 1] if len(row) >= col else None
 
     merge_ranges = read_sheet1_merge_ranges(path)
     for ref in merge_ranges:
         min_col, min_row, max_col, max_row = range_boundaries(ref)
-        if not set(range(min_col, max_col + 1)) & {3, 4, 5, 6, 7, 8, 10}:
+        if not set(range(min_col, max_col + 1)) & {3, 4, 5, 6, 7, 8, 9, 10}:
             continue
         source = values.get((min_row, min_col))
         if source is None:
@@ -401,7 +466,9 @@ def load_recommendation_rows(path: Path) -> list[dict[str, object]]:
             for col in range(min_col, max_col + 1):
                 if col in {6, 7}:
                     merged_recommendation_cells.add((row_num, col))
-                if col in {3, 4, 5, 6, 7, 8, 10} and values.get((row_num, col)) is None:
+                if col == 9:
+                    merged_recommendation_cells.add((row_num, col))
+                if col in {3, 4, 5, 6, 7, 8, 9, 10} and values.get((row_num, col)) is None:
                     values[(row_num, col)] = source
 
     rows = []
@@ -414,9 +481,11 @@ def load_recommendation_rows(path: Path) -> list[dict[str, object]]:
                 "core": values.get((row_num, 6)),
                 "rec": values.get((row_num, 7)),
                 "ref": values.get((row_num, 8)),
+                "ref_detail": values.get((row_num, 9)),
                 "comment": values.get((row_num, 10)),
                 "core_merged": (row_num, 6) in merged_recommendation_cells,
                 "rec_merged": (row_num, 7) in merged_recommendation_cells,
+                "ref_merged": (row_num, 9) in merged_recommendation_cells,
             }
         )
     return rows
@@ -450,7 +519,7 @@ def format_depts(depts: dict[str, dict[str, object]]) -> str:
     for dept, info in depts.items():
         lines.append(
             f"    '{dept}': {{ comment:{json.dumps(info['comment'], ensure_ascii=False)}, "
-            f"core:{js_value(info['core'])}, rec:{js_value(info['rec'])}, ref:{js_value(info['ref'])} }},"
+            f"core:{js_value(info['core'])}, rec:{js_value(info['rec'])}, ref:{js_value(info['ref'])}, sources:{js_value(info['sources'])} }},"
         )
     lines.append("  },")
     return "\n".join(lines)
@@ -460,10 +529,7 @@ def main() -> None:
     html = INDEX.read_text(encoding="utf-8")
     subjects_2026 = load_curriculum("2026")
     subjects_2025 = load_curriculum("2025")
-    flat_subjects = [item for values in subjects_2026.values() for item in values]
-    course_to_id = OrderedDict()
-    for item in flat_subjects + [item for values in subjects_2025.values() for item in values]:
-        course_to_id.setdefault(item["name"], item["id"])
+    course_to_id = build_course_to_id()
     depts = load_depts()
     mapped_depts = load_dept_mapping(course_to_id, depts)
 
@@ -498,7 +564,7 @@ def main() -> None:
     )
     INDEX.write_text(html, encoding="utf-8")
 
-    print(f"subjects_2026={len(flat_subjects)}")
+    print(f"subjects_2026={sum(len(values) for values in subjects_2026.values())}")
     print(f"subjects_2025={sum(len(values) for values in subjects_2025.values())}")
     print(f"depts={len(mapped_depts)}")
     print("empty=" + ",".join(k for k, v in mapped_depts.items() if not v["core"] and not v["rec"]))
