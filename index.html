@@ -198,19 +198,20 @@
     font-weight: 700;
     font-size: 11px;
   }
-  table.grid td.area-header {
-    background: #e8e4dc;
-    font-weight: 700;
+  table.grid td.area-label {
     font-size: 11px;
-    writing-mode: vertical-rl;
-    text-orientation: upright;
-    width: 22px;
-    padding: 8px 4px;
+    font-weight: 700;
+    vertical-align: middle;
+    text-align: center;
+    background: #e8e4dc;
   }
   table.grid td.subject-cell {
     cursor: default;
     transition: background .15s;
-    min-width: 60px;
+    min-width: 70px;
+  }
+  table.grid td.empty-cell {
+    background: #fafafa;
   }
 
   /* 음영 상태 — box-shadow inset으로 4면 테두리 표현 */
@@ -553,55 +554,98 @@ const DEPT_DATA = {
   },
   depts: {
     /* ── 인문 ── */
-    '국어국문':  { core:['k4','k7','k3'], rec:['k9','k10'], ref:['h1','h2'] },
-    '사학':      { core:['h1','h2','s8'], rec:['k4','k7'],  ref:['s6','s13'] },
-    '철학':      { core:['s8','k4'],      rec:['s11','s3'], ref:['s16','k7'] },
-    '심리':      { core:['s5','s3'],      rec:['sc7','m4'], ref:['s12','e5'] },
-    '교육':      { core:['s5','k4'],      rec:['k7','s3'],  ref:['h1','h2'] },
-    '사회':      { core:['s5','s7'],      rec:['s12','m4'], ref:['s3','s15'] },
-    '언론':      { core:['k4','k7'],      rec:['s5','e5'],  ref:['k10','t2'] },
+    '국어국문':  { comment:'문학·화법·독서 교과를 폭넓고 깊이 있게 이수해야 합니다. 다양한 장르의 읽기·쓰기 경험이 경쟁력입니다.',
+                   core:['k4','k7','k3'], rec:['k9','k10'], ref:['h1','h2'] },
+    '사학':      { comment:'한국사를 기반으로 세계사·동아시아사까지 역사 교과를 폭넓게 이수하세요. 윤리적 사고와 자료 분석 능력도 중요합니다.',
+                   core:['h1','h2','s8'], rec:['k4','k7'],  ref:['s6','s13'] },
+    '철학':      { comment:'윤리와 사상, 화법과 언어 등 논리·사고력을 기르는 교과가 핵심입니다. 다양한 인문 교과를 균형 있게 이수하세요.',
+                   core:['s8','k4'],      rec:['s11','s3'], ref:['s16','k7'] },
+    '심리':      { comment:'사회·문화와 생명과학 기초가 필요합니다. 통계(확률과 통계)도 반드시 이수하세요. 인간 행동 이해를 위한 융합적 시각이 중요합니다.',
+                   core:['s5','s3'],      rec:['sc7','m4'], ref:['s12','e5'] },
+    '교육':      { comment:'인문·사회 교과를 폭넓게 이수하되, 언어 능력과 사회 이해력을 함께 갖추는 것이 중요합니다.',
+                   core:['s5','k4'],      rec:['k7','s3'],  ref:['h1','h2'] },
+    '사회':      { comment:'사회·문화와 경제 교과가 핵심입니다. 통계적 사고력을 위해 확률과 통계도 함께 이수하면 유리합니다.',
+                   core:['s5','s7'],      rec:['s12','m4'], ref:['s3','s15'] },
+    '언론':      { comment:'언어와 표현력이 가장 중요합니다. 미디어·사회현상 분석을 위해 사회 교과와 영어도 함께 이수하세요.',
+                   core:['k4','k7'],      rec:['s5','e5'],  ref:['k10','t2'] },
     /* ── 사회과학 ── */
-    '경제':      { core:['s7','m5','m4'], rec:['s15','m3'], ref:['m7','s6'] },
-    '경영':      { core:['s7','m4'],      rec:['s15'],      ref:['m5','e5'] },
-    '법학':      { core:['s5','k4'],      rec:['s3','k7'],  ref:['s8','s11'] },
-    '행정':      { core:['s5','s3'],      rec:['s7','s8'],  ref:['k4','s6'] },
-    '국제관계':  { core:['s4','e5'],      rec:['e8','l1'],  ref:['s5','s6'] },
-    '사회복지':  { core:['s5','s3'],      rec:['s12','m4'], ref:['sc7','s15'] },
+    '경제':      { comment:'수학(미적분, 확률과 통계)과 경제 교과가 필수입니다. 계량적 분석 능력이 전공의 핵심 역량입니다.',
+                   core:['s7','m5','m4'], rec:['s15','m3'], ref:['m7','s6'] },
+    '경영':      { comment:'경제와 수학(확률과 통계) 교과를 기반으로 이수하세요. 영어 실력도 경쟁력이 됩니다.',
+                   core:['s7','m4'],      rec:['s15'],      ref:['m5','e5'] },
+    '법학':      { comment:'논리적 글쓰기와 사회현상 이해가 핵심입니다. 화법과 언어, 독서와 작문을 통해 논증 능력을 키우세요.',
+                   core:['s5','k4'],      rec:['s3','k7'],  ref:['s8','s11'] },
+    '행정':      { comment:'사회·문화, 현대사회와 윤리 등 사회 교과를 폭넓게 이수하고, 공공 문제 분석 능력을 함께 키우세요.',
+                   core:['s5','s3'],      rec:['s7','s8'],  ref:['k4','s6'] },
+    '국제관계':  { comment:'영어 심화와 세계시민과 지리 교과가 핵심입니다. 외국어 역량과 국제 정세 이해력을 집중 키우세요.',
+                   core:['s4','e5'],      rec:['e8','l1'],  ref:['s5','s6'] },
+    '사회복지':  { comment:'사회·문화, 현대사회와 윤리 교과를 기반으로 이수하세요. 통계와 생명과학 기초도 실무에 도움이 됩니다.',
+                   core:['s5','s3'],      rec:['s12','m4'], ref:['sc7','s15'] },
     /* ── 이공 ── */
-    '수학':      { core:['m3','m5','m7','m6'], rec:['sc1','sc2'],    ref:['m4','m8'] },
-    '물리':      { core:['sc5','sc9','sc13','m5'], rec:['m7','m6'],  ref:['sc1','sc2'] },
-    '화학':      { core:['sc6','sc10','sc14','m5'], rec:['sc1','sc2'], ref:['m3','sc18'] },
-    '생명과학':  { core:['sc7','sc11','sc15'], rec:['sc6','m5'],     ref:['sc1','sc2','sc18'] },
-    '컴퓨터':    { core:['m3','m5','t1','t2'], rec:['m8','t4','sc5'], ref:['m7','t5'] },
-    '전기전자':  { core:['sc5','sc9','m5','t1'], rec:['sc13','m7'],  ref:['t2','t4'] },
-    '기계':      { core:['sc5','sc9','m5'],     rec:['m7','m6'],     ref:['sc13','sc18'] },
-    '화공':      { core:['sc6','sc10','m5'],    rec:['sc14','sc1'],  ref:['m7'] },
-    '건축':      { core:['m3','m6'],            rec:['sc5','a2'],    ref:['s4'] },
+    '수학':      { comment:'수학 교과를 위계에 따라 빠짐없이 이수해야 합니다. 대수→미적분Ⅰ→미적분Ⅱ·기하 순서로 심화하세요.',
+                   core:['m3','m5','m7','m6'], rec:['sc1','sc2'],    ref:['m4','m8'] },
+    '물리':      { comment:'물리학과 수학(미적분)을 반드시 심화 이수해야 합니다. 역학과 에너지, 전자기와 양자까지 이수하면 매우 유리합니다.',
+                   core:['sc5','sc9','sc13','m5'], rec:['m7','m6'],  ref:['sc1','sc2'] },
+    '화학':      { comment:'화학 전 과목과 수학을 깊이 있게 이수해야 합니다. 물질과 에너지, 화학 반응의 세계는 전공 기초 그 자체입니다.',
+                   core:['sc6','sc10','sc14','m5'], rec:['sc1','sc2'], ref:['m3','sc18'] },
+    '생명과학':  { comment:'생명과학 심화 교과를 순서대로 이수하는 것이 중요합니다. 화학과 수학도 기본으로 갖춰야 합니다.',
+                   core:['sc7','sc11','sc15'], rec:['sc6','m5'],     ref:['sc1','sc2','sc18'] },
+    '컴퓨터':    { comment:'수학과 정보 교과가 핵심입니다. 인공지능 기초, 데이터 과학 등 정보 관련 과목을 최대한 이수하세요.',
+                   core:['m3','m5','t1','t2'], rec:['m8','t4','sc5'], ref:['m7','t5'] },
+    '전기전자':  { comment:'물리학과 수학 심화가 필수입니다. 전자기와 양자는 전공과 직결되므로 반드시 이수하세요.',
+                   core:['sc5','sc9','m5','t1'], rec:['sc13','m7'],  ref:['t2','t4'] },
+    '기계':      { comment:'물리학(역학)과 수학이 가장 중요합니다. 역학과 에너지는 전공의 핵심 교과이므로 반드시 이수하세요.',
+                   core:['sc5','sc9','m5'],     rec:['m7','m6'],     ref:['sc13','sc18'] },
+    '화공':      { comment:'화학과 수학이 양대 핵심입니다. 물질과 에너지, 화학 반응의 세계를 깊이 있게 이수해야 합니다.',
+                   core:['sc6','sc10','m5'],    rec:['sc14','sc1'],  ref:['m7'] },
+    '건축':      { comment:'수학(기하)과 공간적 사고력이 핵심입니다. 미술 교과와 세계시민과 지리 등 공간·환경 관련 과목도 도움이 됩니다.',
+                   core:['m3','m6'],            rec:['sc5','a2'],    ref:['s4'] },
     /* ── 의약 ── */
-    '의예':      { core:['sc7','sc11','sc6','m5'], rec:['sc15','sc10'], ref:['sc1','sc2','sc18'] },
-    '치의예':    { core:['sc7','sc6','m5'],     rec:['sc11','sc10'], ref:['sc1','sc2'] },
-    '한의예':    { core:['sc7','sc6','m5'],     rec:['sc11','h1'],   ref:['sc1','sc2'] },
-    '약학':      { core:['sc6','sc10','sc7','m5'], rec:['sc14','sc11'], ref:['sc1','sc2'] },
-    '간호':      { core:['sc7','sc6'],          rec:['sc11','m4'],   ref:['sc1','sc2'] },
-    '수의예':    { core:['sc7','sc6','m5'],     rec:['sc11','sc15'], ref:['sc1','sc2'] },
+    '의예':      { comment:'생명과학과 화학은 반드시, 깊이 있게 이수해야 합니다. 수학과 윤리적 사고도 중요합니다. 세포와 물질대사, 생물의 유전까지 이수하면 유리합니다.',
+                   core:['sc7','sc11','sc6','m5'], rec:['sc15','sc10'], ref:['sc1','sc2','sc18'] },
+    '치의예':    { comment:'생명과학과 화학이 핵심입니다. 수학 기초도 탄탄히 다져두세요. 세포 수준의 생명현상 이해가 중요합니다.',
+                   core:['sc7','sc6','m5'],     rec:['sc11','sc10'], ref:['sc1','sc2'] },
+    '한의예':    { comment:'생명과학과 화학을 중심으로 이수하되, 한국사와 윤리 등 인문학적 소양도 함께 갖추는 것이 좋습니다.',
+                   core:['sc7','sc6','m5'],     rec:['sc11','h1'],   ref:['sc1','sc2'] },
+    '약학':      { comment:'화학과 생명과학을 심화 이수하는 것이 가장 중요합니다. 수학도 필수이며, 화학 반응의 세계와 세포 관련 과목을 이수하면 유리합니다.',
+                   core:['sc6','sc10','sc7','m5'], rec:['sc14','sc11'], ref:['sc1','sc2'] },
+    '간호':      { comment:'생명과학과 화학이 핵심입니다. 통계 기초(확률과 통계)와 인간 이해를 위한 사회 교과도 실무에 도움이 됩니다.',
+                   core:['sc7','sc6'],          rec:['sc11','m4'],   ref:['sc1','sc2'] },
+    '수의예':    { comment:'생명과학과 화학을 깊이 있게 이수해야 합니다. 생물의 유전 등 생명 심화 과목까지 이수하면 전공 적합성을 높일 수 있습니다.',
+                   core:['sc7','sc6','m5'],     rec:['sc11','sc15'], ref:['sc1','sc2'] },
     /* ── 사범 ── */
-    '국어교육':  { core:['k4','k7','k3'],       rec:['k9','k10'],    ref:['h1'] },
-    '수학교육':  { core:['m3','m5','m4'],        rec:['m7','m6'],     ref:['t1'] },
-    '영어교육':  { core:['e3','e4','e5'],        rec:['e8','e6'],     ref:['e7'] },
-    '과학교육':  { core:['sc5','sc6','sc7'],     rec:['sc1','sc2'],   ref:['m5'] },
-    '사회교육':  { core:['s5','s8','h1'],        rec:['h2','s3'],     ref:['s6'] },
-    '체육교육':  { core:['p1','p2','p3'],        rec:['p5','p6'],     ref:['sc7'] },
+    '국어교육':  { comment:'국어 교과 전반을 폭넓게 이수해야 합니다. 문학·화법·독서를 균형 있게 이수하고 풍부한 언어 경험을 쌓으세요.',
+                   core:['k4','k7','k3'],       rec:['k9','k10'],    ref:['h1'] },
+    '수학교육':  { comment:'수학 전 교과를 깊이 있게 이수해야 합니다. 미적분Ⅱ·기하·확률과 통계는 필수이며, 수학 전반에 대한 넓은 시야가 필요합니다.',
+                   core:['m3','m5','m4'],        rec:['m7','m6'],     ref:['t1'] },
+    '영어교육':  { comment:'영어 교과를 폭넓게 이수하고 심화 과목도 함께 선택하세요. 다양한 영어 장르에 대한 이해와 실력이 중요합니다.',
+                   core:['e3','e4','e5'],        rec:['e8','e6'],     ref:['e7'] },
+    '과학교육':  { comment:'물리학·화학·생명과학을 균형 있게 이수해야 합니다. 특정 과학에 치우치지 않고 전반적인 과학 소양을 갖추는 것이 중요합니다.',
+                   core:['sc5','sc6','sc7'],     rec:['sc1','sc2'],   ref:['m5'] },
+    '사회교육':  { comment:'사회 교과를 폭넓게 이수하고, 한국사 등 역사 교과도 충실히 이수하세요. 다양한 사회현상에 대한 균형 있는 시각이 필요합니다.',
+                   core:['s5','s8','h1'],        rec:['h2','s3'],     ref:['s6'] },
+    '체육교육':  { comment:'체육 교과를 충실히 이수하고 스포츠 심화 과목도 선택하세요. 신체 활동의 과학적 원리 이해를 위해 생명과학도 도움이 됩니다.',
+                   core:['p1','p2','p3'],        rec:['p5','p6'],     ref:['sc7'] },
     /* ── 예체능 ── */
-    '미술':      { core:['a2','a4','a6'],        rec:['a1'],          ref:['k4'] },
-    '음악':      { core:['a1','a3','a5'],        rec:['a2'],          ref:['k4'] },
-    '체육':      { core:['p1','p2','p3'],        rec:['p5','p6'],     ref:['sc7'] },
-    '디자인':    { core:['a2','a6','t1'],        rec:['t2'],          ref:['k4','t5'] },
-    '무용':      { core:['p1','p2','p3','a1'],   rec:['p5'],          ref:['a3'] },
+    '미술':      { comment:'미술 창작과 미술과 매체를 중심으로 실기 역량을 키우세요. 다양한 매체 표현 능력이 현대 미술 전공의 핵심입니다.',
+                   core:['a2','a4','a6'],        rec:['a1'],          ref:['k4'] },
+    '음악':      { comment:'음악 연주와 창작, 음악 감상과 비평을 통해 실기와 이론을 균형 있게 키우세요. 꾸준한 실기 역량이 무엇보다 중요합니다.',
+                   core:['a1','a3','a5'],        rec:['a2'],          ref:['k4'] },
+    '체육':      { comment:'체육 교과를 충실히 이수하고 스포츠 생활 과목도 선택하세요. 전문적인 신체 훈련과 함께 이론적 기초도 갖추어야 합니다.',
+                   core:['p1','p2','p3'],        rec:['p5','p6'],     ref:['sc7'] },
+    '디자인':    { comment:'미술과 정보 교과를 함께 이수하는 것이 중요합니다. 인공지능 기초와 소프트웨어 관련 과목도 현대 디자인에 필수 역량입니다.',
+                   core:['a2','a6','t1'],        rec:['t2'],          ref:['k4','t5'] },
+    '무용':      { comment:'체육과 음악 교과를 균형 있게 이수하세요. 신체 표현력과 음악적 감각을 함께 키우는 것이 중요합니다.',
+                   core:['p1','p2','p3','a1'],   rec:['p5'],          ref:['a3'] },
     /* ── 농생명 ── */
-    '농학':      { core:['sc7','sc8'],           rec:['sc1','sc2'],   ref:['sc18'] },
-    '식품영양':  { core:['sc6','sc7'],           rec:['sc10','sc11'], ref:['sc1','sc2'] },
-    '산림':      { core:['sc8','sc7'],           rec:['sc17'],        ref:['sc1','sc2'] },
-    '환경생태':  { core:['sc8','sc17','sc7'],    rec:['s10'],         ref:['sc1','s12'] },
+    '농학':      { comment:'생명과학과 지구과학을 중심으로 이수하세요. 환경·생태 관련 융합 과목도 농업의 미래 방향과 연결됩니다.',
+                   core:['sc7','sc8'],           rec:['sc1','sc2'],   ref:['sc18'] },
+    '식품영양':  { comment:'화학과 생명과학이 핵심입니다. 물질과 에너지, 세포와 물질대사를 이수하면 식품 성분과 대사 이해에 직접 도움이 됩니다.',
+                   core:['sc6','sc7'],           rec:['sc10','sc11'], ref:['sc1','sc2'] },
+    '산림':      { comment:'지구과학과 생명과학을 중심으로, 기후변화와 환경생태 등 환경 관련 과목을 함께 이수하세요.',
+                   core:['sc8','sc7'],           rec:['sc17'],        ref:['sc1','sc2'] },
+    '환경생태':  { comment:'지구과학, 기후변화와 환경생태, 생명과학을 중심으로 이수하세요. 사회문제 탐구 등 환경정책 관련 과목도 도움이 됩니다.',
+                   core:['sc8','sc17','sc7'],    rec:['s10'],         ref:['sc1','s12'] },
   },
 };
 
@@ -627,38 +671,47 @@ function renderGrid() {
   const container = document.getElementById('grid-container');
 
   let html = '<table class="grid"><colgroup>';
-  html += '<col style="width:22px">';
-  html += '<col style="width:65px">';
-  html += '<col style="width:55px">'.repeat(3);
+  html += '<col style="width:66px">';
+  html += '<col style="width:72px">'.repeat(6);
   html += '</colgroup>';
 
-  html += '<thead><tr>';
-  html += '<th colspan="2">교과(군)</th>';
-  html += '<th>1학년</th><th>2학년</th><th>3학년</th>';
-  html += '</tr></thead><tbody>';
+  html += '<thead>';
+  html += '<tr>';
+  html += '<th rowspan="2">교과(군)</th>';
+  html += '<th colspan="2">1학년</th><th colspan="2">2학년</th><th colspan="2">3학년</th>';
+  html += '</tr>';
+  html += '<tr>';
+  html += '<th>1학기</th><th>2학기</th>';
+  html += '<th>1학기</th><th>2학기</th>';
+  html += '<th>1학기</th><th>2학기</th>';
+  html += '</tr>';
+  html += '</thead><tbody>';
 
   for (const area of AREAS) {
     const aSubjs = subjs[area.key] || [];
     if (!aSubjs.length) continue;
 
-    // 학년별 grouping
-    const byGrade = {1:[], 2:[], 3:[]};
-    for (const s of aSubjs) byGrade[s.grade].push(s);
+    // 학년·학기별 grouping
+    const cols = {
+      '1-1':[], '1-2':[],
+      '2-1':[], '2-2':[],
+      '3-1':[], '3-2':[],
+    };
+    for (const s of aSubjs) cols[`${s.grade}-${s.sem}`].push(s);
 
-    const maxRows = Math.max(byGrade[1].length, byGrade[2].length, byGrade[3].length, 1);
+    const maxRows = Math.max(...Object.values(cols).map(c => c.length), 1);
 
     for (let r = 0; r < maxRows; r++) {
       html += '<tr>';
       if (r === 0) {
-        html += `<td class="area-header" rowspan="${maxRows}">${area.label}</td>`;
-        html += `<td style="font-size:11px;font-weight:700;vertical-align:middle;text-align:left;padding-left:4px" rowspan="${maxRows}">${area.label}</td>`;
+        html += `<td class="area-label" rowspan="${maxRows}">${area.label}</td>`;
       }
-      for (let g = 1; g <= 3; g++) {
-        const s = byGrade[g][r];
+      for (const key of ['1-1','1-2','2-1','2-2','3-1','3-2']) {
+        const s = cols[key][r];
         if (s) {
           html += `<td class="subject-cell" id="cell-${s.id}" data-id="${s.id}">${s.name}<br><span class="type-${s.type}">${typeLabel(s.type)}</span></td>`;
         } else {
-          html += '<td style="background:#fafafa"></td>';
+          html += '<td class="empty-cell"></td>';
         }
       }
       html += '</tr>';
@@ -718,7 +771,11 @@ function updateInfoBox() {
   const allSubjs = Object.values(subjs).flat();
   const getName = id => allSubjs.find(s=>s.id===id)?.name || id;
 
-  let html = `<strong>${state.dept}</strong> 권장 교과<div class="subj-list">`;
+  let html = `<strong>${state.dept}</strong> 권장 교과`;
+  if (info.comment) {
+    html += `<div style="margin:8px 0 4px;font-size:11.5px;color:var(--text2);line-height:1.65;background:var(--accent2);border-left:3px solid var(--accent);padding:6px 8px;border-radius:0 5px 5px 0">${info.comment}</div>`;
+  }
+  html += `<div class="subj-list">`;
   if (info.core?.length) {
     html += '<div style="margin:6px 0 2px;font-size:10px;color:#888">핵심 권장</div>';
     info.core.forEach(id => { html += `<span class="subj-tag core">${getName(id)}</span>`; });
