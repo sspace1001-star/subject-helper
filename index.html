@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2028 권장이수교과 · 과목선택 도우미 · 숭문고</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg2: #f8f7f4;
+    --bg3: #f0ede6;
+    --text: #1a1a1a;
+    --text2: #555;
+    --text3: #888;
+    --border: #ddd;
+    --accent: #1a5fa8;
+    --accent2: #e8f0fa;
+    --core-bg: #fde8e8;
+    --core-border: #e05252;
+    --core-text: #c0392b;
+    --rec-bg: #fff3cd;
+    --rec-border: #e6a817;
+    --rec-text: #7d5a00;
+    --ref-bg: #e8f5e9;
+    --ref-border: #4caf50;
+    --ref-text: #2e7d32;
+    --tag-il: #e3f0ff;
+    --tag-il-t: #1565c0;
+    --tag-jin: #fce4ec;
+    --tag-jin-t: #880e4f;
+    --tag-fus: #e8f5e9;
+    --tag-fus-t: #1b5e20;
+    --tag-fusx: #fff8e1;
+    --tag-fusx-t: #e65100;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
+    background: var(--bg2);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* ── 헤더 ── */
+  header {
+    background: var(--accent);
+    color: #fff;
+    padding: 16px 20px 14px;
+  }
+  header h1 { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
+  header p  { font-size: 12px; opacity: .8; margin-top: 3px; }
+
+  /* ── 레이아웃 ── */
+  .wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 16px 12px;
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 14px;
+  }
+  @media (max-width: 760px) {
+    .wrap { grid-template-columns: 1fr; }
+  }
+
+  /* ── 사이드 패널 ── */
+  .side { display: flex; flex-direction: column; gap: 12px; }
+
+  .card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .card h3 {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text3);
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  /* 학년 탭 */
+  .tab-group { display: flex; gap: 6px; }
+  .tab {
+    flex: 1;
+    padding: 8px 0;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: var(--bg2);
+    font-size: 13px;
+    cursor: pointer;
+    text-align: center;
+    transition: all .15s;
+    color: var(--text2);
+  }
+  .tab.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    font-weight: 700;
+  }
+
+  /* 셀렉트 */
+  select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: var(--bg);
+    font-size: 13px;
+    color: var(--text);
+    margin-bottom: 8px;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+  }
+  select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+
+  .reset-btn {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: var(--bg2);
+    color: var(--text2);
+    font-size: 12px;
+    cursor: pointer;
+    margin-top: 4px;
+    transition: background .15s;
+  }
+  .reset-btn:hover { background: var(--bg3); }
+
+  /* 범례 */
+  .legend { display: flex; flex-wrap: wrap; gap: 6px; }
+  .leg-item {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 11px; color: var(--text2);
+  }
+  .leg-dot {
+    width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0;
+  }
+
+  /* 권장교과 안내 */
+  .info-box {
+    font-size: 12px;
+    color: var(--text2);
+    line-height: 1.7;
+    min-height: 60px;
+  }
+  .info-box .subj-list { margin-top: 10px; }
+  .subj-tag {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    margin: 2px 2px 2px 0;
+  }
+  .subj-tag.core  { background: var(--core-bg);  color: var(--core-text); }
+  .subj-tag.rec   { background: var(--rec-bg);   color: var(--rec-text);  }
+  .subj-tag.ref   { background: var(--ref-bg);   color: var(--ref-text);  }
+
+  /* ── 편제표 ── */
+  .table-wrap {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: auto;
+    padding: 14px;
+  }
+  .table-title {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--text2);
+    text-align: center;
+    margin-bottom: 12px;
+  }
+
+  table.grid {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  table.grid th, table.grid td {
+    border: 1px solid #ddd;
+    padding: 5px 6px;
+    text-align: center;
+    white-space: nowrap;
+  }
+  table.grid th {
+    background: #f0ede6;
+    font-weight: 700;
+    font-size: 11px;
+  }
+  table.grid td.area-header {
+    background: #e8e4dc;
+    font-weight: 700;
+    font-size: 11px;
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    width: 22px;
+    padding: 8px 4px;
+  }
+  table.grid td.subject-cell {
+    cursor: default;
+    transition: background .15s;
+    min-width: 60px;
+  }
+
+  /* 음영 상태 — box-shadow inset으로 4면 테두리 표현 */
+  td.hl-core {
+    background: var(--core-bg) !important;
+    box-shadow: inset 0 0 0 1.5px var(--core-border);
+    color: var(--core-text) !important;
+    font-weight: 700;
+  }
+  td.hl-rec {
+    background: var(--rec-bg) !important;
+    box-shadow: inset 0 0 0 1.5px var(--rec-border);
+    color: var(--rec-text) !important;
+    font-weight: 700;
+  }
+  td.hl-ref {
+    background: var(--ref-bg) !important;
+    box-shadow: inset 0 0 0 1.5px var(--ref-border);
+    color: var(--ref-text) !important;
+    font-weight: 700;
+  }
+
+  /* 과목 유형 태그 */
+  .type-il   { color: var(--tag-il-t);   font-size: 10px; }
+  .type-jin  { color: var(--tag-jin-t);  font-size: 10px; }
+  .type-fus  { color: var(--tag-fus-t);  font-size: 10px; }
+
+  footer {
+    text-align: center;
+    font-size: 11px;
+    color: var(--text3);
+    padding: 20px 12px;
+  }
+
+  /* ── 비밀번호 게이트 ── */
+  #pw-gate {
+    position: fixed; inset: 0;
+    background: var(--accent);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 9999;
+  }
+  #pw-gate h2 {
+    color: #fff; font-size: 18px; font-weight: 700;
+    margin-bottom: 6px; letter-spacing: -0.3px;
+  }
+  #pw-gate p {
+    color: rgba(255,255,255,.7); font-size: 12px; margin-bottom: 24px;
+  }
+  #pw-box {
+    display: flex; gap: 8px;
+  }
+  #pw-input {
+    padding: 10px 14px; border: none; border-radius: 8px;
+    font-size: 15px; width: 160px; text-align: center;
+    font-family: inherit; letter-spacing: 4px;
+    outline: none;
+  }
+  #pw-btn {
+    padding: 10px 18px; background: rgba(255,255,255,.2);
+    color: #fff; border: 1.5px solid rgba(255,255,255,.5);
+    border-radius: 8px; font-size: 14px; font-family: inherit;
+    cursor: pointer; transition: background .15s;
+  }
+  #pw-btn:hover { background: rgba(255,255,255,.35); }
+  #pw-err {
+    color: #ffcdd2; font-size: 12px; margin-top: 12px;
+    min-height: 16px;
+  }
+</style>
+</head>
+<body>
+
+<div id="pw-gate">
+  <h2>숭문고 과목선택 도우미</h2>
+  <p>접근 비밀번호를 입력하세요</p>
+  <div id="pw-box">
+    <input id="pw-input" type="password" placeholder="비밀번호" maxlength="20"
+           onkeydown="if(event.key==='Enter')checkPw()">
+    <button id="pw-btn" onclick="checkPw()">확인</button>
+  </div>
+  <div id="pw-err"></div>
+</div>
+
+<script>
+(function(){
+  const _k = atob('a2tz');
+  if(sessionStorage.getItem('smg_auth')==='1'){
+    document.getElementById('pw-gate').style.display='none';
+  }
+  window.checkPw = function(){
+    const v = document.getElementById('pw-input').value;
+    if(v===_k){
+      sessionStorage.setItem('smg_auth','1');
+      document.getElementById('pw-gate').style.display='none';
+    } else {
+      document.getElementById('pw-err').textContent='비밀번호가 올바르지 않습니다.';
+      document.getElementById('pw-input').value='';
+      document.getElementById('pw-input').focus();
+    }
+  };
+})();
+</script>
+
+<header>
+  <h1>2028 권장이수교과 · 과목선택 도우미</h1>
+  <p>숭문고등학교 &nbsp;|&nbsp; 2028학년도 대입 · 진로 담당 교사 김경선</p>
+</header>
+
+<div class="wrap">
+
+  <!-- 사이드 -->
+  <aside class="side">
+
+    <div class="card">
+      <h3>학년 / 입학연도</h3>
+      <div class="tab-group">
+        <button class="tab active" data-year="2026" onclick="setYear(this)">2026 입학<br><small style="font-weight:400;font-size:10px">현 1학년</small></button>
+        <button class="tab" data-year="2025" onclick="setYear(this)">2025 입학<br><small style="font-weight:400;font-size:10px">현 2학년</small></button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>희망 진로 선택</h3>
+      <select id="sel-univ" onchange="onUnivChange()">
+        <option value="">— 전체 일반 권장 —</option>
+        <option value="seoul">서울대</option>
+        <option value="yonsei">연세대</option>
+        <option value="korea">고려대</option>
+        <option value="성균관">성균관대</option>
+        <option value="한양">한양대</option>
+        <option value="이화">이화여대</option>
+        <option value="중앙">중앙대</option>
+        <option value="경희">경희대</option>
+        <option value="건국">건국대</option>
+        <option value="동국">동국대</option>
+      </select>
+      <select id="sel-series" onchange="onSeriesChange()" disabled>
+        <option value="">— 계열 선택 —</option>
+      </select>
+      <select id="sel-dept" onchange="onDeptChange()" disabled>
+        <option value="">— 먼저 계열을 선택 —</option>
+      </select>
+      <button class="reset-btn" onclick="resetAll()">선택 초기화</button>
+    </div>
+
+    <div class="card">
+      <h3>범례</h3>
+      <div class="legend">
+        <div class="leg-item"><div class="leg-dot" style="background:#fde8e8;border:1.5px solid #e05252"></div> 핵심 권장</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#fff3cd;border:1.5px solid #e6a817"></div> 권장</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#e8f5e9;border:1.5px solid #4caf50"></div> 참고</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#fff;border:1px solid #ddd"></div> 해당없음</div>
+      </div>
+      <div style="margin-top:10px; display:flex; flex-wrap:wrap; gap:5px;">
+        <span style="font-size:10px;padding:2px 6px;background:#e3f0ff;border-radius:4px;color:#1565c0">공통·일반선택</span>
+        <span style="font-size:10px;padding:2px 6px;background:#fce4ec;border-radius:4px;color:#880e4f">진로선택</span>
+        <span style="font-size:10px;padding:2px 6px;background:#e8f5e9;border-radius:4px;color:#1b5e20">융합선택</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>권장 교과 안내</h3>
+      <div class="info-box" id="info-box">
+        <span style="color:#bbb">학과를 선택하면 권장 교과가 표시됩니다</span>
+      </div>
+    </div>
+
+    <div style="font-size:11px;color:#999;padding:4px 2px;line-height:1.6">
+      ※ 본 자료는 2028 대입 일반 권장 사항에 기반한 참고용 도구입니다.<br>
+      최종 과목 선택은 담임·진로교사와 상담 후 결정하세요.
+    </div>
+  </aside>
+
+  <!-- 편제표 -->
+  <main>
+    <div class="table-wrap">
+      <div class="table-title">교 육 과 정 편 제 표</div>
+      <div id="grid-container"></div>
+    </div>
+  </main>
+
+</div>
+
+<footer>숭문고등학교 &copy; 2025 · 2028학년도 대입 과목선택 도우미</footer>
+
+<script>
+/* =========================================================
+   데이터 정의 — 숭문고 2026/2025 편제
+   type: il=공통·일반선택, jin=진로선택, fus=융합선택
+   ========================================================= */
+
+const AREAS = [
+  { key: 'korean',   label: '국어' },
+  { key: 'math',     label: '수학' },
+  { key: 'english',  label: '영어' },
+  { key: 'history',  label: '한국사' },
+  { key: 'society',  label: '사회' },
+  { key: 'science',  label: '과학' },
+  { key: 'pe',       label: '체육' },
+  { key: 'arts',     label: '예술' },
+  { key: 'tech',     label: '기술·가정/정보' },
+  { key: 'second',   label: '제2외국어' },
+  { key: 'career',   label: '진로·교양' },
+];
+
+/* ── 숭문고 2026 입학생 편제 ── */
+const SUBJECTS_2026 = {
+  korean: [
+    { id:'k1',  name:'공통국어1',         type:'il',  grade:1, sem:1 },
+    { id:'k2',  name:'공통국어2',         type:'il',  grade:1, sem:2 },
+    { id:'k3',  name:'문학',              type:'il',  grade:2, sem:1 },
+    { id:'k4',  name:'화법과 언어',       type:'il',  grade:2, sem:2 },
+    { id:'k5',  name:'매체 의사소통',     type:'fus', grade:2, sem:1 },
+    { id:'k6',  name:'독서 토론과 글쓰기',type:'fus', grade:2, sem:2 },
+    { id:'k7',  name:'독서와 작문',       type:'il',  grade:3, sem:1 },
+    { id:'k8',  name:'언어생활 탐구',     type:'fus', grade:3, sem:1 },
+    { id:'k9',  name:'주제 탐구 독서',    type:'jin', grade:3, sem:2 },
+    { id:'k10', name:'문학과 영상',       type:'jin', grade:3, sem:2 },
+  ],
+  math: [
+    { id:'m1',  name:'공통수학1',    type:'il',  grade:1, sem:1 },
+    { id:'m2',  name:'공통수학2',    type:'il',  grade:1, sem:2 },
+    { id:'m3',  name:'대수',         type:'il',  grade:2, sem:1 },
+    { id:'m4',  name:'확률과 통계',  type:'il',  grade:2, sem:1 },
+    { id:'m5',  name:'미적분Ⅰ',     type:'il',  grade:2, sem:2 },
+    { id:'m6',  name:'기하',         type:'jin', grade:2, sem:2 },
+    { id:'m7',  name:'미적분Ⅱ',     type:'jin', grade:3, sem:1 },
+    { id:'m8',  name:'인공지능 수학',type:'jin', grade:3, sem:1 },
+    { id:'m9',  name:'경제 수학',    type:'jin', grade:3, sem:1 },
+    { id:'m10', name:'수학과제 탐구',type:'fus', grade:3, sem:2 },
+    { id:'m11', name:'수학과 문화',  type:'fus', grade:3, sem:2 },
+    { id:'m12', name:'실용 통계',    type:'fus', grade:3, sem:2 },
+  ],
+  english: [
+    { id:'e1', name:'공통영어1',           type:'il',  grade:1, sem:1 },
+    { id:'e2', name:'공통영어2',           type:'il',  grade:1, sem:2 },
+    { id:'e3', name:'영어Ⅰ',              type:'il',  grade:2, sem:1 },
+    { id:'e4', name:'영어Ⅱ',              type:'il',  grade:2, sem:2 },
+    { id:'e5', name:'영어 독해와 작문',    type:'il',  grade:3, sem:1 },
+    { id:'e6', name:'영미 문학 읽기',      type:'jin', grade:3, sem:1 },
+    { id:'e7', name:'영어 발표와 토론',    type:'jin', grade:3, sem:2 },
+    { id:'e8', name:'심화 영어 독해와 작문',type:'jin',grade:3, sem:2 },
+  ],
+  history: [
+    { id:'h1', name:'한국사1', type:'il', grade:1, sem:1 },
+    { id:'h2', name:'한국사2', type:'il', grade:1, sem:2 },
+  ],
+  society: [
+    { id:'s1',  name:'통합사회1',              type:'il',  grade:1, sem:1 },
+    { id:'s2',  name:'통합사회2',              type:'il',  grade:1, sem:2 },
+    { id:'s3',  name:'현대사회와 윤리',        type:'il',  grade:2, sem:1 },
+    { id:'s4',  name:'세계시민과 지리',        type:'il',  grade:2, sem:1 },
+    { id:'s5',  name:'사회와 문화',            type:'il',  grade:2, sem:1 },
+    { id:'s6',  name:'세계사',                 type:'il',  grade:2, sem:2 },
+    { id:'s7',  name:'경제',                   type:'jin', grade:2, sem:2 },
+    { id:'s8',  name:'윤리와 사상',            type:'jin', grade:2, sem:2 },
+    { id:'s9',  name:'도시의 미래 탐구',       type:'jin', grade:2, sem:2 },
+    { id:'s10', name:'한국지리 탐구',          type:'jin', grade:3, sem:1 },
+    { id:'s11', name:'인문학과 윤리',          type:'jin', grade:3, sem:1 },
+    { id:'s12', name:'사회문제 탐구',          type:'fus', grade:3, sem:1 },
+    { id:'s13', name:'역사로 탐구하는 현대 세계',type:'fus',grade:3, sem:1 },
+    { id:'s14', name:'여행지리',               type:'fus', grade:3, sem:2 },
+    { id:'s15', name:'금융과 경제생활',        type:'fus', grade:3, sem:2 },
+    { id:'s16', name:'윤리문제 탐구',          type:'fus', grade:3, sem:2 },
+  ],
+  science: [
+    { id:'sc1',  name:'통합과학1',         type:'il',  grade:1, sem:1 },
+    { id:'sc2',  name:'통합과학2',         type:'il',  grade:1, sem:2 },
+    { id:'sc3',  name:'과학탐구실험1',     type:'il',  grade:1, sem:1 },
+    { id:'sc4',  name:'과학탐구실험2',     type:'il',  grade:1, sem:2 },
+    { id:'sc5',  name:'물리학',            type:'il',  grade:2, sem:1 },
+    { id:'sc6',  name:'화학',              type:'il',  grade:2, sem:1 },
+    { id:'sc7',  name:'생명과학',          type:'il',  grade:2, sem:1 },
+    { id:'sc8',  name:'지구과학',          type:'il',  grade:2, sem:1 },
+    { id:'sc9',  name:'역학과 에너지',     type:'jin', grade:2, sem:2 },
+    { id:'sc10', name:'물질과 에너지',     type:'jin', grade:2, sem:2 },
+    { id:'sc11', name:'세포와 물질대사',   type:'jin', grade:2, sem:2 },
+    { id:'sc12', name:'행성우주과학',      type:'jin', grade:2, sem:2 },
+    { id:'sc13', name:'전자기와 양자',     type:'jin', grade:3, sem:1 },
+    { id:'sc14', name:'화학 반응의 세계',  type:'jin', grade:3, sem:1 },
+    { id:'sc15', name:'생물의 유전',       type:'jin', grade:3, sem:1 },
+    { id:'sc16', name:'지구시스템과학',    type:'jin', grade:3, sem:1 },
+    { id:'sc17', name:'기후변화와 환경생태',type:'fus',grade:3, sem:2 },
+    { id:'sc18', name:'융합과학 탐구',     type:'fus', grade:3, sem:2 },
+  ],
+  pe: [
+    { id:'p1', name:'체육1',       type:'il',  grade:1, sem:1 },
+    { id:'p2', name:'체육2',       type:'il',  grade:1, sem:2 },
+    { id:'p3', name:'스포츠 문화', type:'jin', grade:2, sem:1 },
+    { id:'p4', name:'스포츠 과학', type:'jin', grade:2, sem:2 },
+    { id:'p5', name:'스포츠 생활1',type:'fus', grade:3, sem:1 },
+    { id:'p6', name:'스포츠 생활2',type:'fus', grade:3, sem:2 },
+  ],
+  arts: [
+    { id:'a1', name:'음악',            type:'il',  grade:1, sem:1 },
+    { id:'a2', name:'미술',            type:'il',  grade:1, sem:2 },
+    { id:'a3', name:'음악 연주와 창작',type:'jin', grade:2, sem:1 },
+    { id:'a4', name:'미술 창작',       type:'jin', grade:2, sem:2 },
+    { id:'a5', name:'음악 감상과 비평',type:'jin', grade:3, sem:1 },
+    { id:'a6', name:'미술과 매체',     type:'fus', grade:3, sem:1 },
+  ],
+  tech: [
+    { id:'t1', name:'정보',                type:'il',  grade:1, sem:1 },
+    { id:'t2', name:'인공지능 기초',       type:'jin', grade:1, sem:2 },
+    { id:'t3', name:'컴퓨터 시스템 일반', type:'jin', grade:2, sem:1 },
+    { id:'t4', name:'데이터 과학',         type:'jin', grade:2, sem:2 },
+    { id:'t5', name:'소프트웨어와 생활',   type:'fus', grade:3, sem:2 },
+  ],
+  second: [
+    { id:'l1', name:'일본어',      type:'il',  grade:2, sem:1 },
+    { id:'l2', name:'중국어',      type:'il',  grade:2, sem:1 },
+    { id:'l3', name:'일본어 회화', type:'jin', grade:3, sem:1 },
+    { id:'l4', name:'중국어 회화', type:'jin', grade:3, sem:1 },
+    { id:'l5', name:'일본 문화',   type:'fus', grade:3, sem:2 },
+    { id:'l6', name:'중국 문화',   type:'fus', grade:3, sem:2 },
+  ],
+  career: [
+    { id:'c1', name:'진로와 직업', type:'il',  grade:3, sem:1 },
+    { id:'c2', name:'논술',        type:'fus', grade:3, sem:2 },
+  ],
+};
+
+/* 2025 입학생 — 편제 동일 */
+const SUBJECTS_2025 = JSON.parse(JSON.stringify(SUBJECTS_2026));
+
+/* =========================================================
+   학과별 권장교과 데이터 (숭문고 개설 과목 기준)
+   core: 핵심권장, rec: 권장, ref: 참고
+   ========================================================= */
+const DEPT_DATA = {
+  series: {
+    '인문':    ['국어국문','사학','철학','심리','교육','사회','언론'],
+    '사회과학':['경제','경영','법학','행정','국제관계','사회복지'],
+    '이공':    ['수학','물리','화학','생명과학','컴퓨터','전기전자','기계','화공','건축'],
+    '의약':    ['의예','치의예','한의예','약학','간호','수의예'],
+    '사범':    ['국어교육','수학교육','영어교육','과학교육','사회교육','체육교육'],
+    '예체능':  ['미술','음악','체육','디자인','무용'],
+    '농생명':  ['농학','식품영양','산림','환경생태'],
+  },
+  depts: {
+    /* ── 인문 ── */
+    '국어국문':  { core:['k4','k7','k3'], rec:['k9','k10'], ref:['h1','h2'] },
+    '사학':      { core:['h1','h2','s8'], rec:['k4','k7'],  ref:['s6','s13'] },
+    '철학':      { core:['s8','k4'],      rec:['s11','s3'], ref:['s16','k7'] },
+    '심리':      { core:['s5','s3'],      rec:['sc7','m4'], ref:['s12','e5'] },
+    '교육':      { core:['s5','k4'],      rec:['k7','s3'],  ref:['h1','h2'] },
+    '사회':      { core:['s5','s7'],      rec:['s12','m4'], ref:['s3','s15'] },
+    '언론':      { core:['k4','k7'],      rec:['s5','e5'],  ref:['k10','t2'] },
+    /* ── 사회과학 ── */
+    '경제':      { core:['s7','m5','m4'], rec:['s15','m3'], ref:['m7','s6'] },
+    '경영':      { core:['s7','m4'],      rec:['s15'],      ref:['m5','e5'] },
+    '법학':      { core:['s5','k4'],      rec:['s3','k7'],  ref:['s8','s11'] },
+    '행정':      { core:['s5','s3'],      rec:['s7','s8'],  ref:['k4','s6'] },
+    '국제관계':  { core:['s4','e5'],      rec:['e8','l1'],  ref:['s5','s6'] },
+    '사회복지':  { core:['s5','s3'],      rec:['s12','m4'], ref:['sc7','s15'] },
+    /* ── 이공 ── */
+    '수학':      { core:['m3','m5','m7','m6'], rec:['sc1','sc2'],    ref:['m4','m8'] },
+    '물리':      { core:['sc5','sc9','sc13','m5'], rec:['m7','m6'],  ref:['sc1','sc2'] },
+    '화학':      { core:['sc6','sc10','sc14','m5'], rec:['sc1','sc2'], ref:['m3','sc18'] },
+    '생명과학':  { core:['sc7','sc11','sc15'], rec:['sc6','m5'],     ref:['sc1','sc2','sc18'] },
+    '컴퓨터':    { core:['m3','m5','t1','t2'], rec:['m8','t4','sc5'], ref:['m7','t5'] },
+    '전기전자':  { core:['sc5','sc9','m5','t1'], rec:['sc13','m7'],  ref:['t2','t4'] },
+    '기계':      { core:['sc5','sc9','m5'],     rec:['m7','m6'],     ref:['sc13','sc18'] },
+    '화공':      { core:['sc6','sc10','m5'],    rec:['sc14','sc1'],  ref:['m7'] },
+    '건축':      { core:['m3','m6'],            rec:['sc5','a2'],    ref:['s4'] },
+    /* ── 의약 ── */
+    '의예':      { core:['sc7','sc11','sc6','m5'], rec:['sc15','sc10'], ref:['sc1','sc2','sc18'] },
+    '치의예':    { core:['sc7','sc6','m5'],     rec:['sc11','sc10'], ref:['sc1','sc2'] },
+    '한의예':    { core:['sc7','sc6','m5'],     rec:['sc11','h1'],   ref:['sc1','sc2'] },
+    '약학':      { core:['sc6','sc10','sc7','m5'], rec:['sc14','sc11'], ref:['sc1','sc2'] },
+    '간호':      { core:['sc7','sc6'],          rec:['sc11','m4'],   ref:['sc1','sc2'] },
+    '수의예':    { core:['sc7','sc6','m5'],     rec:['sc11','sc15'], ref:['sc1','sc2'] },
+    /* ── 사범 ── */
+    '국어교육':  { core:['k4','k7','k3'],       rec:['k9','k10'],    ref:['h1'] },
+    '수학교육':  { core:['m3','m5','m4'],        rec:['m7','m6'],     ref:['t1'] },
+    '영어교육':  { core:['e3','e4','e5'],        rec:['e8','e6'],     ref:['e7'] },
+    '과학교육':  { core:['sc5','sc6','sc7'],     rec:['sc1','sc2'],   ref:['m5'] },
+    '사회교육':  { core:['s5','s8','h1'],        rec:['h2','s3'],     ref:['s6'] },
+    '체육교육':  { core:['p1','p2','p3'],        rec:['p5','p6'],     ref:['sc7'] },
+    /* ── 예체능 ── */
+    '미술':      { core:['a2','a4','a6'],        rec:['a1'],          ref:['k4'] },
+    '음악':      { core:['a1','a3','a5'],        rec:['a2'],          ref:['k4'] },
+    '체육':      { core:['p1','p2','p3'],        rec:['p5','p6'],     ref:['sc7'] },
+    '디자인':    { core:['a2','a6','t1'],        rec:['t2'],          ref:['k4','t5'] },
+    '무용':      { core:['p1','p2','p3','a1'],   rec:['p5'],          ref:['a3'] },
+    /* ── 농생명 ── */
+    '농학':      { core:['sc7','sc8'],           rec:['sc1','sc2'],   ref:['sc18'] },
+    '식품영양':  { core:['sc6','sc7'],           rec:['sc10','sc11'], ref:['sc1','sc2'] },
+    '산림':      { core:['sc8','sc7'],           rec:['sc17'],        ref:['sc1','sc2'] },
+    '환경생태':  { core:['sc8','sc17','sc7'],    rec:['s10'],         ref:['sc1','s12'] },
+  },
+};
+
+/* =========================================================
+   상태
+   ========================================================= */
+let state = {
+  year: '2026',
+  univ: '',
+  series: '',
+  dept: '',
+};
+
+function getSubjects() {
+  return state.year === '2026' ? SUBJECTS_2026 : SUBJECTS_2025;
+}
+
+/* =========================================================
+   편제표 렌더링
+   ========================================================= */
+function renderGrid() {
+  const subjs = getSubjects();
+  const container = document.getElementById('grid-container');
+
+  let html = '<table class="grid"><colgroup>';
+  html += '<col style="width:22px">';
+  html += '<col style="width:65px">';
+  html += '<col style="width:55px">'.repeat(3);
+  html += '</colgroup>';
+
+  html += '<thead><tr>';
+  html += '<th colspan="2">교과(군)</th>';
+  html += '<th>1학년</th><th>2학년</th><th>3학년</th>';
+  html += '</tr></thead><tbody>';
+
+  for (const area of AREAS) {
+    const aSubjs = subjs[area.key] || [];
+    if (!aSubjs.length) continue;
+
+    // 학년별 grouping
+    const byGrade = {1:[], 2:[], 3:[]};
+    for (const s of aSubjs) byGrade[s.grade].push(s);
+
+    const maxRows = Math.max(byGrade[1].length, byGrade[2].length, byGrade[3].length, 1);
+
+    for (let r = 0; r < maxRows; r++) {
+      html += '<tr>';
+      if (r === 0) {
+        html += `<td class="area-header" rowspan="${maxRows}">${area.label}</td>`;
+        html += `<td style="font-size:11px;font-weight:700;vertical-align:middle;text-align:left;padding-left:4px" rowspan="${maxRows}">${area.label}</td>`;
+      }
+      for (let g = 1; g <= 3; g++) {
+        const s = byGrade[g][r];
+        if (s) {
+          html += `<td class="subject-cell" id="cell-${s.id}" data-id="${s.id}">${s.name}<br><span class="type-${s.type}">${typeLabel(s.type)}</span></td>`;
+        } else {
+          html += '<td style="background:#fafafa"></td>';
+        }
+      }
+      html += '</tr>';
+    }
+  }
+
+  html += '</tbody></table>';
+  container.innerHTML = html;
+  applyHighlight();
+}
+
+function typeLabel(t) {
+  return { il:'일반', jin:'진로', fus:'융합' }[t] || '';
+}
+
+/* =========================================================
+   음영 처리
+   ========================================================= */
+function applyHighlight() {
+  document.querySelectorAll('.subject-cell').forEach(td => {
+    td.classList.remove('hl-core','hl-rec','hl-ref');
+  });
+
+  if (!state.dept) return;
+  const info = DEPT_DATA.depts[state.dept];
+  if (!info) return;
+
+  for (const id of (info.core||[])) {
+    const el = document.getElementById('cell-'+id);
+    if (el) el.classList.add('hl-core');
+  }
+  for (const id of (info.rec||[])) {
+    const el = document.getElementById('cell-'+id);
+    if (el) { el.classList.remove('hl-core'); el.classList.add('hl-rec'); }
+  }
+  for (const id of (info.ref||[])) {
+    const el = document.getElementById('cell-'+id);
+    if (el && !el.classList.contains('hl-core') && !el.classList.contains('hl-rec')) {
+      el.classList.add('hl-ref');
+    }
+  }
+}
+
+/* =========================================================
+   안내 박스
+   ========================================================= */
+function updateInfoBox() {
+  const box = document.getElementById('info-box');
+  if (!state.dept) {
+    box.innerHTML = '<span style="color:#bbb">학과를 선택하면 권장 교과가 표시됩니다</span>';
+    return;
+  }
+  const info = DEPT_DATA.depts[state.dept];
+  if (!info) { box.innerHTML = '<span style="color:#bbb">데이터 준비중</span>'; return; }
+
+  const subjs = getSubjects();
+  const allSubjs = Object.values(subjs).flat();
+  const getName = id => allSubjs.find(s=>s.id===id)?.name || id;
+
+  let html = `<strong>${state.dept}</strong> 권장 교과<div class="subj-list">`;
+  if (info.core?.length) {
+    html += '<div style="margin:6px 0 2px;font-size:10px;color:#888">핵심 권장</div>';
+    info.core.forEach(id => { html += `<span class="subj-tag core">${getName(id)}</span>`; });
+  }
+  if (info.rec?.length) {
+    html += '<div style="margin:8px 0 2px;font-size:10px;color:#888">권장</div>';
+    info.rec.forEach(id => { html += `<span class="subj-tag rec">${getName(id)}</span>`; });
+  }
+  if (info.ref?.length) {
+    html += '<div style="margin:8px 0 2px;font-size:10px;color:#888">참고</div>';
+    info.ref.forEach(id => { html += `<span class="subj-tag ref">${getName(id)}</span>`; });
+  }
+  html += '</div>';
+  box.innerHTML = html;
+}
+
+/* =========================================================
+   이벤트 핸들러
+   ========================================================= */
+function setYear(btn) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  state.year = btn.dataset.year;
+  renderGrid();
+}
+
+function onUnivChange() {
+  state.univ = document.getElementById('sel-univ').value;
+  state.series = '';
+  state.dept = '';
+  populateSeries();
+  document.getElementById('sel-dept').innerHTML = '<option value="">— 먼저 계열을 선택 —</option>';
+  document.getElementById('sel-dept').disabled = true;
+  applyHighlight();
+  updateInfoBox();
+}
+
+function populateSeries() {
+  const sel = document.getElementById('sel-series');
+  sel.innerHTML = '<option value="">— 계열 선택 —</option>';
+  for (const k of Object.keys(DEPT_DATA.series)) {
+    sel.innerHTML += `<option value="${k}">${k}</option>`;
+  }
+  sel.disabled = false;
+}
+
+function onSeriesChange() {
+  state.series = document.getElementById('sel-series').value;
+  state.dept = '';
+  const deptSel = document.getElementById('sel-dept');
+  deptSel.innerHTML = '<option value="">— 학과 선택 —</option>';
+  if (state.series) {
+    for (const d of (DEPT_DATA.series[state.series]||[])) {
+      deptSel.innerHTML += `<option value="${d}">${d}</option>`;
+    }
+    deptSel.disabled = false;
+  } else {
+    deptSel.innerHTML = '<option value="">— 먼저 계열을 선택 —</option>';
+    deptSel.disabled = true;
+  }
+  applyHighlight();
+  updateInfoBox();
+}
+
+function onDeptChange() {
+  state.dept = document.getElementById('sel-dept').value;
+  applyHighlight();
+  updateInfoBox();
+}
+
+function resetAll() {
+  state = { year: state.year, univ:'', series:'', dept:'' };
+  document.getElementById('sel-univ').value = '';
+  document.getElementById('sel-series').innerHTML = '<option value="">— 계열 선택 —</option>';
+  document.getElementById('sel-series').disabled = true;
+  document.getElementById('sel-dept').innerHTML = '<option value="">— 먼저 계열을 선택 —</option>';
+  document.getElementById('sel-dept').disabled = true;
+  applyHighlight();
+  updateInfoBox();
+}
+
+/* 초기화 */
+renderGrid();
+/* 처음엔 계열 바로 보이도록 */
+populateSeries();
+</script>
+</body>
+</html>
