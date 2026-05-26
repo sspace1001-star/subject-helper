@@ -59,6 +59,8 @@ docs/             ← 원본 엑셀 파일 (git 미포함)
 | F | **핵심과목** (필수적 이수 권장) |
 | G | **권장과목** (가급적 이수 권장) |
 | H | 참고 (`ref`) |
+| I | 앱 ref 과목명 출력 |
+| J | 앱 comment 초안 |
 
 전국 대학 × 학과 조합 약 1,360행으로 구성됨.
 
@@ -82,13 +84,13 @@ docs/             ← 원본 엑셀 파일 (git 미포함)
 
 6. H열 비고는 과목명으로 직접 매핑 가능한 값만 `ref`로 반영
 
-7. `comment`는 엑셀 근거 없으므로 전부 비움
+7. J열 코멘트 초안은 `comment`로 반영
 
 #### 앱 코드 형식
 
 ```js
 '학과명': {
-  comment: '',
+  comment: '코멘트 초안',
   core: ['과목id', ...],  // 핵심권장 (엑셀 핵심과목 기반)
   rec:  ['과목id', ...],  // 권장      (엑셀 권장과목 기반)
   ref:  ['과목id', ...],  // 참고      (엑셀 H열 기반)
@@ -113,6 +115,13 @@ docs/             ← 원본 엑셀 파일 (git 미포함)
 ```
 
 직접 추천 과목을 입력하지 않음.
+
+I/J열 보조 데이터 생성:
+
+```bash
+.venv/bin/python scripts/write_ref_to_excel.py
+.venv/bin/python scripts/write_comments_to_excel.py
+```
 
 ---
 

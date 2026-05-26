@@ -32,6 +32,80 @@
 - 
 ```
 
+## 2026-05-26 15:04 KST - 2028 엑셀 J열 comment 초안 기록
+
+상태: 완료
+담당: Codex
+
+목표:
+- 레퍼런스 사이트처럼 학과 선택 시 코멘트가 나오도록 2028 엑셀 J열에 코멘트 초안 생성
+- J열 코멘트를 앱 data comment로 사용
+
+변경:
+- 파일: docs/2028학년도 권역별 대학별 권장과목(반영과목).xlsx
+  - J3: 앱 comment
+  - J4: 코멘트 초안
+  - J5~J1362: 대학/모집단위/F/G/H/I 기반 코멘트 초안 기록
+- 파일: scripts/write_comments_to_excel.py
+  - J열 코멘트 초안 생성 스크립트 추가
+- 파일: scripts/update_from_excel.py
+  - J열 comment 로드
+  - 미적분Ⅱ 정규화 오류 수정
+- 파일: scripts/audit_excel_mapping.py
+  - comment_count 출력 추가
+- 파일: index.html
+  - comment 반영 재생성
+- 파일: README.md
+  - I/J열 보조 데이터 생성 방법 추가
+
+검증:
+- 명령: .venv/bin/python scripts/write_comments_to_excel.py
+- 결과: written_rows=788
+- 명령: .venv/bin/python scripts/update_from_excel.py
+- 결과: subjects_2026=103, subjects_2025=103, depts=43
+- 명령: .venv/bin/python scripts/audit_excel_mapping.py
+- 결과: curriculum_subjects_2026=103, app_subjects_2026=103, curriculum_subjects_2025=103, app_subjects_2025=103, bad_ids=[], ref_count=290, comment_count=39
+- 명령: openpyxl read_only J열 샘플 확인
+- 결과: J3=앱 comment, J4=코멘트 초안, J25 값 확인
+
+남은 작업:
+- 없음
+
+차단/주의:
+- J열 코멘트는 자동 생성 초안임. 선생님 검수/수정 필요
+
+## 2026-05-26 14:56 KST - 2028 엑셀 I열 ref 기록
+
+상태: 완료
+담당: Codex
+
+목표:
+- docs/2028학년도 권역별 대학별 권장과목 엑셀 I열에 현재 앱 ref 참고과목 기록
+
+변경:
+- 파일: docs/2028학년도 권역별 대학별 권장과목(반영과목).xlsx
+  - I3: 앱 ref
+  - I4: 참고과목
+  - I5~I1362: 현재 index.html DEPT_DATA.ref 과목명을 모집단위 매칭 행에 기록
+- 파일: scripts/write_ref_to_excel.py
+  - 현재 앱 ref를 과목명으로 변환해 엑셀 I열에 쓰는 스크립트 추가
+
+검증:
+- 명령: .venv/bin/python scripts/write_ref_to_excel.py
+- 결과: written_rows=637
+- 명령: XML 직접 확인
+- 결과: I열 비어있지 않은 셀 639개(I3/I4 포함)
+- 명령: openpyxl read_only 로딩 확인
+- 결과: I3=앱 ref, I4=참고과목, I19 값 확인
+- 명령: .venv/bin/python scripts/audit_excel_mapping.py
+- 결과: curriculum_subjects_2026=103, app_subjects_2026=103, curriculum_subjects_2025=103, app_subjects_2025=103, bad_ids=[], ref_count=273, comment_nonempty=[]
+
+남은 작업:
+- 없음
+
+차단/주의:
+- docs/는 .gitignore 대상이라 배포 커밋에는 포함되지 않음
+
 ## 2026-05-26 14:37 KST - 편제표 과목명 열 기준 명시
 
 상태: 완료

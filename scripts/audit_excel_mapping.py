@@ -37,14 +37,11 @@ def main() -> None:
     dept_items = dept_data["depts"].items()
 
     bad_ids = []
-    bad_comment = []
     for dept, info in dept_items:
         for field in ("core", "rec", "ref"):
             for subject_id in info[field]:
                 if subject_id not in app_ids:
                     bad_ids.append((dept, field, subject_id))
-        if info["comment"]:
-            bad_comment.append(dept)
 
     expected_2026 = curriculum_count("2026")
     expected_2025 = curriculum_count("2025")
@@ -55,13 +52,12 @@ def main() -> None:
     print(f"departments={len(dept_data['depts'])}")
     print(f"bad_ids={bad_ids}")
     print(f"ref_count={sum(len(info['ref']) for info in dept_data['depts'].values())}")
-    print(f"comment_nonempty={bad_comment}")
+    print(f"comment_count={sum(1 for info in dept_data['depts'].values() if info['comment'])}")
 
     if (
         len(app_subjects_2026) != expected_2026
         or len(app_subjects_2025) != expected_2025
         or bad_ids
-        or bad_comment
     ):
         raise SystemExit(1)
 

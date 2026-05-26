@@ -312,7 +312,7 @@ def normalize_course_text(text: object) -> list[str]:
     if not raw or raw == "-" or any(marker in raw for marker in GENERIC_TEXT):
         return []
     raw = raw.replace("Ⅰ", "I").replace("Ⅱ", "II")
-    raw = raw.replace("미적분I", "미적분Ⅰ").replace("미적분II", "미적분Ⅱ")
+    raw = raw.replace("미적분II", "미적분Ⅱ").replace("미적분I", "미적분Ⅰ")
     raw = re.sub(r"[\[\]\(\)]", ",", raw)
     raw = re.sub(r"또는|및|/|·|\\n|-일반선택:|-진로선택:", ",", raw)
     tokens = []
@@ -342,6 +342,7 @@ def load_dept_mapping(course_to_id: dict[str, str], depts: dict[str, dict[str, o
         core_ids: list[str] = []
         rec_ids: list[str] = []
         ref_ids: list[str] = []
+        comments: list[str] = []
         for row in rows:
             unit = clean(row["unit"])
             if not matches(unit, dept):
@@ -353,11 +354,14 @@ def load_dept_mapping(course_to_id: dict[str, str], depts: dict[str, dict[str, o
                 target.extend(token_to_ids(token, course_to_id))
             for token in normalize_course_text(row["ref"]):
                 ref_ids.extend(token_to_ids(token, course_to_id))
+            comment = clean(row["comment"])
+            if comment:
+                comments.append(comment)
         core = ordered_unique(core_ids)
         rec = [item for item in ordered_unique(rec_ids) if item not in set(core)]
         ref = ordered_unique(ref_ids)
         result[dept] = {
-            "comment": "",
+            "comment": " ".join(ordered_unique(comments)[:2]),
             "core": core,
             "rec": rec,
             "ref": ref,
@@ -382,13 +386,13 @@ def load_recommendation_rows(path: Path) -> list[dict[str, object]]:
     values = {}
     merged_recommendation_cells = set()
     for row_num, row in enumerate(ws.iter_rows(min_row=5, values_only=True), 5):
-        for col in (3, 4, 5, 6, 7, 8):
-            values[(row_num, col)] = row[col - 1]
+        for col in (3, 4, 5, 6, 7, 8, 10):
+            values[(row_num, col)] = row[col - 1] if len(row) >= col else None
 
     merge_ranges = read_sheet1_merge_ranges(path)
     for ref in merge_ranges:
         min_col, min_row, max_col, max_row = range_boundaries(ref)
-        if not set(range(min_col, max_col + 1)) & {3, 4, 5, 6, 7, 8}:
+        if not set(range(min_col, max_col + 1)) & {3, 4, 5, 6, 7, 8, 10}:
             continue
         source = values.get((min_row, min_col))
         if source is None:
@@ -397,7 +401,7 @@ def load_recommendation_rows(path: Path) -> list[dict[str, object]]:
             for col in range(min_col, max_col + 1):
                 if col in {6, 7}:
                     merged_recommendation_cells.add((row_num, col))
-                if col in {3, 4, 5, 6, 7, 8} and values.get((row_num, col)) is None:
+                if col in {3, 4, 5, 6, 7, 8, 10} and values.get((row_num, col)) is None:
                     values[(row_num, col)] = source
 
     rows = []
@@ -410,6 +414,7 @@ def load_recommendation_rows(path: Path) -> list[dict[str, object]]:
                 "core": values.get((row_num, 6)),
                 "rec": values.get((row_num, 7)),
                 "ref": values.get((row_num, 8)),
+                "comment": values.get((row_num, 10)),
                 "core_merged": (row_num, 6) in merged_recommendation_cells,
                 "rec_merged": (row_num, 7) in merged_recommendation_cells,
             }
