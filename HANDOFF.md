@@ -2,6 +2,22 @@
 
 에이전트 간 업무 인수인계 로그.
 
+## 2026-05-26 - 서울대 농경제 l7·참고 표시
+
+상태: 완료
+담당: Composer
+
+목표:
+- F·G열 `제2외국어/한문`이 핵심 l7로 잘못 표시되던 문제 수정
+
+변경:
+- scripts/update_from_excel.py: `제2외국어/…`는 core·rec 파싱 제외
+- index.html: 한문(l7) 편제 추가, 참고 태그 flex gap, I열만 있을 때 안내 문구
+- data/depts.json: 해당 행 core/rec 비움, ref m3·m5·m4·m6 유지
+
+검증:
+- seoul 농경제사회학부: core=[], ref=['m3','m5','m4','m6']
+
 ## 작성 규칙
 - 새 항목은 항상 `## YYYY-MM-DD HH:mm KST - 작업명` 형식으로 문서 최상단에 추가한다.
 - 세션 시작 시 최신 항목 2개만 먼저 읽는다.
@@ -31,6 +47,105 @@
 차단/주의:
 - 
 ```
+
+## 2026-05-26 - 배당표 업로드 2칸 (2026/2025)
+
+상태: 완료
+담당: Composer
+
+목표:
+- 교육과정 편제표를 배당표 엑셀 업로드로 갱신, 초기값은 기존 docs·HTML 유지
+
+변경:
+- app.py: POST /api/upload/curriculum/2026|2025, GET /api/data subjects
+- index.html: 업로드 UI 2개, SUBJECTS_LIVE 서버 덮어쓰기
+- data/depts.json: subjects 2026/2025 시드
+
+검증:
+- subjects 각 103칸, 배포 완료
+
+## 2026-05-26 - 43학과·7계열 하드코딩 제거 (엑셀 전용)
+
+상태: 완료
+담당: Composer
+
+목표:
+- 에이전트가 만든 DEPT_DATA.series / MATCH_KEYWORDS 제거, 모든 선택·데이터를 univIndex(엑셀)만 사용
+
+변경:
+- index.html: DEPT_DATA·MATCH_KEYWORDS 블록 삭제, __global__ 전국 모집단위
+- scripts/update_from_excel.py: build_global_index, depts.json은 univIndex만
+- app.py, README, CLAUDE.md
+
+검증:
+- globalUnits=697, univIndex=45(전국+대학44)
+
+## 2026-05-26 - 전체 대학 엑셀 모집단위 직접 표시 (univIndex)
+
+상태: 완료
+담당: Composer
+
+목표:
+- 43학과 매칭 없이 엑셀 행 전체를 대학별 단과대·모집단위로 표시
+
+변경:
+- scripts/update_from_excel.py: build_univ_index, data/depts.json.univIndex
+- app.py, excel_to_depts.py, index.html UNIV_INDEX 연동
+- D/E 없는 대학(가톨릭대·중앙대 등)은 모집단위만 1단계 선택
+
+검증:
+- 조선대 63개, 서울대 74개, 가톨릭대 33개(단과대 구분 없음)
+
+## 2026-05-26 - 대학 선택 시 엑셀 단과대·모집단위 표시
+
+상태: 완료
+담당: Composer
+
+목표:
+- 조선대 등 D열 단과대(공과대학)를 계열 선택에 반영, E열 모집단위를 학과 선택에 표시
+
+변경:
+- scripts/update_from_excel.py: parse_unit_columns, sources.unitGroup
+- index.html: 대학 선택 시 collectExcelGroups/Units, getDeptInfo 엑셀 모드
+- data/depts.json 재생성
+
+검증:
+- 조선대 unitGroup 12개(공과대학 등), 기계공학과 → 공과대학
+
+## 2026-05-26 - 계열·학과 드롭다운 동적 필터
+
+상태: 완료
+담당: Composer
+
+목표:
+- 데이터 있는 계열·학과만 목록에 표시, 대학 선택 시 해당 대학 데이터 있는 항목만
+
+변경:
+- 파일: index.html — deptHasVisibleData, collectSeriesOptions, collectDeptOptions, populateSeries/Depts
+
+검증:
+- 전체: 계열 7개 중 7, 학과 40 (국제관계·음악·무용 제외)
+- 인하대: 계열 4, 학과 14
+
+## 2026-05-26 - 대학 드롭다운 동적 생성
+
+상태: 완료
+담당: Composer
+
+목표:
+- 엑셀 sources에 있는 전체 대학(인하대 등)을 희망 진로 선택에 표시
+
+변경:
+- 파일: index.html — sel-univ 하드코딩 10개 제거, collectUnivOptions/populateUnivSelect 추가
+
+검증:
+- data/depts.json sources 기준 대학 43개 목록 생성
+
+남은 작업:
+- 없음
+
+차단/주의:
+- 대학 선택은 sources 매칭만 필터; 계열·학과 목록은 기존 43개 고정
 
 ## 2026-05-26 16:05 KST - 엑셀 전체 재파싱·배포
 

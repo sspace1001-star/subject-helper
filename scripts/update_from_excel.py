@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 import subprocess
+import unicodedata
 from collections import OrderedDict
 from pathlib import Path
 
@@ -212,6 +213,10 @@ def clean(value: object) -> str:
     return re.sub(r"\s+", " ", str(value or "").strip())
 
 
+def norm_name(value: str) -> str:
+    return unicodedata.normalize("NFC", value)
+
+
 def get_area(raw: str) -> str | None:
     for key, area in AREA_KEY.items():
         if key in raw:
@@ -231,8 +236,22 @@ def build_course_to_id() -> dict[str, str]:
     return course_to_id
 
 
-def load_curriculum(year: str) -> OrderedDict[str, list[dict[str, object]]]:
-    path = next(p for p in DOCS.glob("*.xlsx") if year in p.name)
+def curriculum_path_for_year(year: str) -> Path:
+    grade = "1학년" if year == "2026" else "2학년"
+    for path in sorted(DOCS.glob("*.xlsx")):
+        if path.name.startswith("~$"):
+            continue
+        name = norm_name(path.name)
+        if year in name and norm_name(grade) in name and norm_name("입학") in name:
+            return path
+    raise FileNotFoundError(f"배당표 xlsx not found for {year} in {DOCS}")
+
+
+def curriculum_to_dict(subjects: OrderedDict[str, list[dict[str, object]]]) -> dict[str, list[dict[str, object]]]:
+    return {area: list(items) for area, items in subjects.items()}
+
+
+def load_curriculum_from_path(path: Path) -> OrderedDict[str, list[dict[str, object]]]:
     wb = openpyxl.load_workbook(path, data_only=True)
     ws = next(wb[name] for name in wb.sheetnames if "입학생" in name)
     values = load_curriculum_values(ws)
@@ -262,6 +281,10 @@ def load_curriculum(year: str) -> OrderedDict[str, list[dict[str, object]]]:
             )
 
     return subjects
+
+
+def load_curriculum(year: str) -> OrderedDict[str, list[dict[str, object]]]:
+    return load_curriculum_from_path(curriculum_path_for_year(year))
 
 
 def load_curriculum_values(ws) -> dict[tuple[int, int], object]:
@@ -333,8 +356,8 @@ def normalize_course_text(text: object) -> list[str]:
         return []
     for prefix in AREA_SLASH_PREFIXES:
         if raw.startswith(f"{prefix}/"):
-            raw = raw.split("/", 1)[1].strip()
-            break
+            # F·G열 "제2외국어/한문" 등은 교과군 안내이지 구체 과목 권장이 아님
+            return []
     raw = raw.replace("Ⅰ", "I").replace("Ⅱ", "II")
     raw = raw.replace("미적분II", "미적분Ⅱ").replace("미적분I", "미적분Ⅰ")
     raw = re.sub(r"[\[\]\(\)]", ",", raw)
@@ -356,6 +379,15 @@ def matches(unit: str, dept: str) -> bool:
     return any(keyword in unit for keyword in keywords)
 
 
+def parse_unit_columns(col_d: object, col_e: object) -> tuple[str, str]:
+    """D/E 분리 시 D=단과대·계열, E=모집단위. 병합·단일 셀은 unit만."""
+    d = clean(col_d)
+    e = clean(col_e)
+    if e and d and e != d:
+        return d, e
+    return "", e or d
+
+
 def university_key(name: object) -> str:
     raw = clean(name)
     if "서울대" in raw:
@@ -374,9 +406,113 @@ def ordered_unique(values: list[str]) -> list[str]:
     return list(OrderedDict((value, None) for value in values))
 
 
-def load_dept_mapping(course_to_id: dict[str, str], depts: dict[str, dict[str, object]], path: Path | None = None) -> dict[str, dict[str, object]]:
-    path = path or next(p for p in DOCS.glob("*.xlsx") if "2028" in p.name)
-    rows = load_recommendation_rows(path)
+def row_subject_ids(row: dict[str, object], course_to_id: dict[str, str]) -> tuple[list[str], list[str], list[str], str]:
+    row_core_ids: list[str] = []
+    row_rec_ids: list[str] = []
+    row_ref_ids: list[str] = []
+    for token in normalize_course_text(row["core"]):
+        row_core_ids.extend(token_to_ids(token, course_to_id))
+    target = row_core_ids if row["rec_merged"] else row_rec_ids
+    for token in normalize_course_text(row["rec"]):
+        target.extend(token_to_ids(token, course_to_id))
+    for token in normalize_course_text(row.get("ref_detail")):
+        row_ref_ids.extend(token_to_ids(token, course_to_id))
+    row_core = ordered_unique(row_core_ids)
+    row_rec = [item for item in ordered_unique(row_rec_ids) if item not in set(row_core)]
+    row_ref = ordered_unique(row_ref_ids)
+    return row_core, row_rec, row_ref, clean(row["comment"])
+
+
+def build_univ_index(rows: list[dict[str, object]], course_to_id: dict[str, str]) -> dict[str, dict[str, object]]:
+    index: dict[str, dict[str, object]] = {}
+    for row in rows:
+        univ_name = clean(row["university"])
+        unit = clean(row["unit"])
+        if not univ_name or not unit:
+            continue
+        row_core, row_rec, row_ref, comment = row_subject_ids(row, course_to_id)
+        if not (row_core or row_rec or row_ref or comment):
+            continue
+        univ = university_key(row["university"])
+        unit_group = clean(row.get("unit_group"))
+        entry = {
+            "unitGroup": unit_group,
+            "unit": unit,
+            "comment": comment,
+            "core": row_core,
+            "rec": row_rec,
+            "ref": row_ref,
+        }
+        bucket = index.setdefault(univ, {"univName": univ_name, "groups": {}})
+        groups: dict[str, list[dict[str, object]]] = bucket["groups"]
+        group_list = groups.setdefault(unit_group, [])
+        existing = next((item for item in group_list if item["unit"] == unit), None)
+        if existing:
+            existing["core"] = ordered_unique(existing["core"] + entry["core"])
+            existing["rec"] = ordered_unique(existing["rec"] + entry["rec"])
+            existing["ref"] = ordered_unique(existing["ref"] + entry["ref"])
+            if entry["comment"]:
+                prev = clean(existing["comment"])
+                existing["comment"] = " ".join(ordered_unique([prev, entry["comment"]])[:2])
+        else:
+            group_list.append(entry)
+    return index
+
+
+def build_global_index(rows: list[dict[str, object]], course_to_id: dict[str, str]) -> dict[str, object]:
+    """전국: 모집단위명(E열) 기준으로 모든 대학 행을 합침."""
+    by_unit: dict[str, dict[str, object]] = {}
+    for row in rows:
+        univ_name = clean(row["university"])
+        unit = clean(row["unit"])
+        if not univ_name or not unit:
+            continue
+        row_core, row_rec, row_ref, comment = row_subject_ids(row, course_to_id)
+        if not (row_core or row_rec or row_ref or comment):
+            continue
+        unit_group = clean(row.get("unit_group"))
+        source = {
+            "univ": university_key(row["university"]),
+            "univName": univ_name,
+            "unitGroup": unit_group,
+            "unit": unit,
+            "comment": comment,
+            "core": row_core,
+            "rec": row_rec,
+            "ref": row_ref,
+        }
+        if unit not in by_unit:
+            by_unit[unit] = {
+                "unitGroup": "",
+                "unit": unit,
+                "comment": comment,
+                "core": list(row_core),
+                "rec": list(row_rec),
+                "ref": list(row_ref),
+                "sources": [source],
+            }
+            continue
+        entry = by_unit[unit]
+        entry["core"] = ordered_unique(entry["core"] + row_core)
+        entry["rec"] = ordered_unique(entry["rec"] + row_rec)
+        entry["ref"] = ordered_unique(entry["ref"] + row_ref)
+        if comment:
+            prev = clean(entry["comment"])
+            entry["comment"] = " ".join(ordered_unique([prev, comment])[:2])
+        entry["sources"].append(source)
+    units = sorted(by_unit.values(), key=lambda item: item["unit"])
+    return {"univName": "전국 · 모집단위", "groups": {"": units}}
+
+
+def load_dept_mapping(
+    course_to_id: dict[str, str],
+    depts: dict[str, dict[str, object]],
+    path: Path | None = None,
+    rows: list[dict[str, object]] | None = None,
+) -> dict[str, dict[str, object]]:
+    if rows is None:
+        path = path or next(p for p in DOCS.glob("*.xlsx") if "2028" in p.name)
+        rows = load_recommendation_rows(path)
     result = {}
 
     for dept, info in depts.items():
@@ -389,23 +525,9 @@ def load_dept_mapping(course_to_id: dict[str, str], depts: dict[str, dict[str, o
             unit = clean(row["unit"])
             if not matches(unit, dept):
                 continue
-            row_core_ids: list[str] = []
-            row_rec_ids: list[str] = []
-            row_ref_ids: list[str] = []
-            for token in normalize_course_text(row["core"]):
-                row_core_ids.extend(token_to_ids(token, course_to_id))
-            target = row_core_ids if row["rec_merged"] else row_rec_ids
-            for token in normalize_course_text(row["rec"]):
-                target.extend(token_to_ids(token, course_to_id))
-            # 참고 과목 ID는 I열(ref_detail)만 사용. H열은 비고 문구.
-            for token in normalize_course_text(row.get("ref_detail")):
-                row_ref_ids.extend(token_to_ids(token, course_to_id))
-            comment = clean(row["comment"])
+            row_core, row_rec, row_ref, comment = row_subject_ids(row, course_to_id)
             if comment:
                 comments.append(comment)
-            row_core = ordered_unique(row_core_ids)
-            row_rec = [item for item in ordered_unique(row_rec_ids) if item not in set(row_core)]
-            row_ref = ordered_unique(row_ref_ids)
             core_ids.extend(row_core)
             rec_ids.extend(row_rec)
             ref_ids.extend(row_ref)
@@ -414,6 +536,7 @@ def load_dept_mapping(course_to_id: dict[str, str], depts: dict[str, dict[str, o
                     {
                         "univ": university_key(row["university"]),
                         "univName": clean(row["university"]),
+                        "unitGroup": clean(row.get("unit_group")),
                         "unit": unit,
                         "comment": comment,
                         "core": row_core,
@@ -473,11 +596,12 @@ def load_recommendation_rows(path: Path) -> list[dict[str, object]]:
 
     rows = []
     for row_num in range(5, ws.max_row + 1):
-        unit_detail = clean(values.get((row_num, 5)))
+        unit_group, unit = parse_unit_columns(values.get((row_num, 4)), values.get((row_num, 5)))
         rows.append(
             {
                 "university": values.get((row_num, 3)),
-                "unit": unit_detail or values.get((row_num, 4)),
+                "unit_group": unit_group,
+                "unit": unit,
                 "core": values.get((row_num, 6)),
                 "rec": values.get((row_num, 7)),
                 "ref": values.get((row_num, 8)),
@@ -530,22 +654,31 @@ def main() -> None:
     subjects_2026 = load_curriculum("2026")
     subjects_2025 = load_curriculum("2025")
     course_to_id = build_course_to_id()
-    depts = load_depts()
-    mapped_depts = load_dept_mapping(course_to_id, depts)
+    excel_path = next(p for p in DOCS.glob("*.xlsx") if "2028" in p.name)
+    excel_rows = load_recommendation_rows(excel_path)
+    univ_index = build_univ_index(excel_rows, course_to_id)
+    univ_index["__global__"] = build_global_index(excel_rows, course_to_id)
 
-    html = re.sub(
-        r"const SUBJECTS_2026 = \{[\s\S]*?const SUBJECTS_2025 = [\s\S]*?\n\n/\* =========================================================\n   학과별 권장교과 데이터",
+    subjects_block = (
         format_subjects("SUBJECTS_2026", subjects_2026)
         + "\n\n/* 2025 입학생 — 2025학년도 입학생 편제 */\n"
         + format_subjects("SUBJECTS_2025", subjects_2025)
-        + "\n\n/* =========================================================\n   학과별 권장교과 데이터",
-        html,
+        + "\n\n"
     )
-    html = re.sub(
-        r"  depts: \{[\s\S]*?\n  \},\n\};",
-        format_depts(mapped_depts) + "\n};",
-        html,
-    )
+    if "const SUBJECTS_2026 = {" in html:
+        html = re.sub(
+            r"const SUBJECTS_2026 = \{[\s\S]*?const SUBJECTS_2025 = \{[\s\S]*?\};\n\n",
+            subjects_block,
+            html,
+            count=1,
+        )
+    elif "const AREAS = {" in html:
+        html = re.sub(
+            r"(const AREAS = \{[\s\S]*?\};\n\n)",
+            r"\1" + subjects_block,
+            html,
+            count=1,
+        )
     html = html.replace(
         'id="cell-${s.id}" data-id="${s.id}"',
         'data-id="${s.id}"',
@@ -564,10 +697,28 @@ def main() -> None:
     )
     INDEX.write_text(html, encoding="utf-8")
 
+    data_dir = ROOT / "data"
+    data_dir.mkdir(exist_ok=True)
+    payload = {
+        "updatedAt": __import__("datetime").datetime.now(__import__("datetime").timezone.utc)
+        .astimezone()
+        .strftime("%Y-%m-%d %H:%M:%S %Z"),
+        "source": next(p.name for p in DOCS.glob("*.xlsx") if "2028" in p.name),
+        "unitCount": len(univ_index["__global__"]["groups"].get("", [])),
+        "univIndex": univ_index,
+        "subjects": {
+            "2026": curriculum_to_dict(subjects_2026),
+            "2025": curriculum_to_dict(subjects_2025),
+        },
+    }
+    (data_dir / "depts.json").write_text(
+        json.dumps(payload, ensure_ascii=False), encoding="utf-8"
+    )
+
     print(f"subjects_2026={sum(len(values) for values in subjects_2026.values())}")
     print(f"subjects_2025={sum(len(values) for values in subjects_2025.values())}")
-    print(f"depts={len(mapped_depts)}")
-    print("empty=" + ",".join(k for k, v in mapped_depts.items() if not v["core"] and not v["rec"]))
+    print(f"univIndex={len(univ_index)}")
+    print(f"globalUnits={len(univ_index['__global__']['groups'].get('', []))}")
 
 
 if __name__ == "__main__":

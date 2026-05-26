@@ -5,8 +5,8 @@
 
 ## 데이터 구조
 - SUBJECTS_2026 / SUBJECTS_2025: 편제표 과목 목록
-- DEPT_DATA.series: 계열 → 학과 매핑
-- DEPT_DATA.depts: 학과별 권장교과 (core/rec/ref)
+- univIndex: 엑셀 기반 대학별 단과대·모집단위 (core/rec/ref)
+- `__global__`: 전국 모집단위 통합
 
 ## 작업 규칙
 - 외부 라이브러리 추가 금지 (단일 파일 유지)
